@@ -58,8 +58,6 @@ Universe.prototype.step = function () {
 
   var before = t1.slice(0, outputBegin);
   var after = t1.slice(outputEnd);
-  console.log('outputs:', outputs)
-  console.log('inputs:', inputs)
   var result = [before, newOutput || outputs, after].reduce(util.concat, [])
 
   // If there are 0 outputs, there should be no affect.
@@ -111,8 +109,6 @@ function getCodeInfo(code) {
       inputs: 2,
       out: 1,
       op: function (inputs) { 
-          console.log(inputs)
-          console.log(inputs.map(function (d, i) { return parseInt(d); }))
           return [parseInt(inputs[0], 10) + parseInt(inputs[1], 10)]
         }
     },
