@@ -1,5 +1,11 @@
 # Programming Game
 
+## Revving up
+1. Install node & npm
+2. npm install lodash baconjs
+3. node main.js
+
+
 ## Goals
 1. Turing Complete
 2. Fun
