@@ -9,6 +9,9 @@ function makeUniverse(tape) {
   u.tape = tape;
   u.__original = u;
 
+  // There need be an END token
+  if (tape[tape.length - 1] != 'END') tape.push('END')
+
   // For now, a daemon is just a location
   u.daemon = 0;
 
@@ -24,22 +27,22 @@ var SIDES =
 Universe.prototype.step = function () {
   var copy = this.copy();
   var t1 = copy.tape.slice();
-  var d = copy.daemon;
+  var daemon = copy.daemon;
 
-  if (d >= t1.length) {
+  if (daemon >= t1.length) {
     copy.alive = false;
     return copy;
   };
 
   // Get code at location
-  var code = t1[d].toString();
+  var code = t1[daemon].toString();
 
   var codeInfo = getCodeInfo(code)
 
-  assert(codeInfo, 'Bad codez: ' + codeInfo + ' @ ' + d);
+  assert(codeInfo, 'Bad codez: ' + codeInfo + ' @ ' + daemon);
 
-  var inputBegin = d - codeInfo.inputs;
-  var inputEnd = d;
+  var inputBegin = daemon - codeInfo.inputs;
+  var inputEnd = daemon
   var inputs = t1.slice(inputBegin, inputEnd);
 
   var newOutput = codeInfo.op(inputs);
@@ -53,16 +56,13 @@ Universe.prototype.step = function () {
       });
   }
 
-  var outputBegin = d + 1;
+  var outputBegin = daemon + 1;
   var outputEnd = outputBegin + codeInfo.out
   var outputs = t1.slice(outputBegin, outputEnd);
 
   var before = t1.slice(0, outputBegin);
   var after = t1.slice(outputEnd);
   var result = [before, newOutput || outputs, after].reduce(util.concat, [])
-
-  // If there are 0 outputs, there should be no affect.
-  // TODO: assert something
 
   copy.daemon++;
   copy.tape = result;

@@ -5,8 +5,9 @@ var Bacon = require('baconjs'),
     config = require('./config.js'),
     util = require('./util.js');
 
-var INPUT = '0 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ END';
+var INPUT = '1';
 
+var inputTape = INPUT.split(' ');
 function printUniverse(universe) {
   var word_beginning_indicis = [];
   var tape = universe.tape;
@@ -40,9 +41,10 @@ function printUniverse(universe) {
 }
 
 function incrementUniverseUntilDone(u0) { 
-  var u1 = u0.step();
 
-  resultsBus.push(u1)
+  resultsBus.push(u0)
+
+  var u1 = u0.step();
 
   // If the universe is still alive, do it again
   if (u1.alive) incrementerBus.push(u1);
@@ -61,4 +63,4 @@ resultsBus.bufferingThrottle(1000).onValue(printUniverse)
 
 incrementerBus.plug(inputUniverse);
 
-inputBus.push(INPUT.split(' '))
+inputBus.push(inputTape)
