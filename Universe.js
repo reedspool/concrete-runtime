@@ -5,9 +5,10 @@ var _ = require('lodash'),
     Tape = require('./Tape.js');
 
 function Universe() {}
+module.exports = Universe
 var __proto = new Universe();
 
-Universe.make = function (codez) {
+Universe.create = function (codez) {
   var u = Object.create(__proto);
   var tape = Tape.fromString(codez);
 
@@ -38,45 +39,43 @@ Universe.prototype.step = function () {
     copy.alive = false;
     return copy;
   };
-
+debugger
   // Get code at location
-  var code = t1.get(daemon).toString();
+  var block = t1.get(daemon);
 
-  var codeInfo = getCodeInfo(code)
-
-  assert(codeInfo, 'Bad codez: ' + codeInfo + ' @ ' + daemon);
+  var codeInfo = block.info;
 
   var inputBegin = daemon - codeInfo.inputs;
   var inputEnd = daemon
   var inputs = t1.get(inputBegin, inputEnd - inputBegin);
 
-  var newOutput = codeInfo.op(inputs);
-
-
 
   var outputBegin = daemon + 1;
 
-  if (newOutput) {
-    copy.tape.spliceArray(outputBegin, newOutput.length, newOutput)
-  }
-
   copy.daemon++;
 
+  var sideEffects = {
+    end: function () {
+      copy.alive = false;
+    }, 
+    goto: function (location) { 
+      copy.daemon = location;
+    }, 
+    shift: function (offset) { 
+      copy.daemon += offset;
+    }, 
+    writeFromTo: function (from, to) { 
+      t1.set(to, t1.get(from))
+    },
+    output: function (output) {
+      copy.tape.spliceArray(outputBegin, output.length, output)
+    }
+  }
+
   if (codeInfo.sideEffects) {
-    codeInfo.sideEffects({
-        end: function () {
-          copy.alive = false;
-        }, 
-        goto: function (location) { 
-          copy.daemon = location;
-        }, 
-        shift: function (offset) { 
-          copy.daemon += offset;
-        }, 
-        writeFromTo: function (from, to) { 
-          t1.set(to, t1.get(from))
-        }
-      }, inputs);
+    codeInfo.op(inputs, sideEffects);
+  } else {
+    codeInfo.op(inputs, sideEffects.output)
   }
 
   return copy;
@@ -96,81 +95,3 @@ Universe.prototype.copy = function () {
 
 Universe.prototype.alive = true;
 
-function getCodeInfo(code) {
-  var opcode = code;
-  var base = {
-    inputs: 0,
-    out: 0,
-    sideEffects: false,
-    op: function () {}
-  };
-
-  var END = {
-    sideEffects: function (sides) { sides.end(); }
-  }
-
-  if (code.match(config.VALUE_REGEX)) opcode = 'value';
-  
-  /**
-   * Super shitty registry for now. Make this dynamic so we can have modules
-   */
-  var specifics = {
-    noop: base,
-    value: base,
-    '_': base,
-
-    '+': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs) { 
-          return [parseInt(inputs[0], 10) + parseInt(inputs[1], 10)]
-        }
-    },
-    '>': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs) { 
-          var result = parseInt(inputs[0], 10) > parseInt(inputs[1], 10);
-
-          return [result ? true : false ]
-        }
-    },
-    '?': {
-      inputs: 3,
-      out: 1,
-      op: function (inputs) { 
-          var predicate = Boolean(inputs[0])
-          var yes = inputs[1];
-          var no = inputs[2];
-
-          return [ predicate ? yes : no ]
-        }
-    },
-    'goto': {
-      inputs: 1,
-      out: 0,
-      sideEffects: function (sides, inputs) { sides.goto(parseInt(inputs[0])) }
-    },
-    'shift': {
-      inputs: 1,
-      out: 0,
-      sideEffects: function (sides, inputs) { sides.shift(parseInt(inputs[0])) }
-    },
-    'copy': {
-      inputs: 2,
-      out: 0,
-      sideEffects: function (sides, inputs) { sides.writeFromTo(parseInt(inputs[0]), parseInt(inputs[1])) }
-    },
-    END: END
-  };
-
-  var info = specifics[opcode]
-
-  if (typeof info == 'function') info = info();
-
-  return _.extend(base, info);
-}
-
-module.exports = {
-  create: Universe.make
-}

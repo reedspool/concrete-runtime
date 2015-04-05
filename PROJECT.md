@@ -31,6 +31,7 @@ _ 2#index
 * Make a block registry and factory
 * Separate daemon impl
 * Make a package.json file with dependencies and description
+* Take out extraneous requires
 
 ### Future
 * IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!

@@ -1,7 +1,8 @@
 var _ = require('lodash'),
     assert = require('assert'),
     config = require('./config.js'),
-    util = require('./util.js');
+    util = require('./util.js'),
+    Block = require('./Block.js');
 
 module.exports = Tape
 
@@ -18,17 +19,20 @@ Tape.create = function (blocks) {
   tape.spliceArray(0, 0, blocks);
 
   // There need be an END token
-  if ( ! tape.contains('END') ) tape.set(tape.length(), 'END')
+  if ( ! tape.contains('END') ) tape.set(tape.length(), Block.create('END'))
 
   return tape;
 }
 
 Tape.fromString = function (codez) { 
-  return Tape.create(codez.split(' '))
+  return Tape.create(codez.split(' ')
+    .map(Block.create))
 }
 
 Tape.prototype.contains = function(word) {
-  return this.__blocks.indexOf(word) != -1;
+  return this.__blocks.filter(function (d) { 
+    return d.toString() === word;
+  }).length > 0;
 }
 
 Tape.prototype.splice = function() {
@@ -61,7 +65,9 @@ Tape.prototype.length = function() {
 };
 
 Tape.prototype.toString = function() {
-  return this.__blocks.join(' ')
+  return this.__blocks
+    .map(function (block) { return block.toString() })
+    .join(' ')
 };
 
 Tape.prototype.updateHistory = function() {
