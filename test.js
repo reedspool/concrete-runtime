@@ -17,7 +17,7 @@ var tests = {
     '0 1 + 1 1 + 2 1 + 3 1 + 4 1 + 5 1 + 6 END',
 
   // Terminates without an END token
-  '1': '1 END',
+  // '64': '64 END',
 
   '3 2 + _ END': '3 2 + 5 END',
   '3 2 > _ END': '3 2 > true END',
@@ -49,21 +49,20 @@ var inputUniverse = inputBus.map(Universe.create);
 
 incrementerBus.onValue(incrementUniverseUntilDone)
 
-incrementerBus.plug(inputUniverse);
-
 
 
 resultsBus.onValue(function (u1) {
-  var actual_output = u1.tape.join(' ');
-  var original_input = u1.__original.tape.join(' ');
+  var actual_output = u1.tape.toString();
+  var original_input = u1.__original.tape.toString();
   var expected_output = tests[original_input];
-
+  console.log('meow')
   console.log(actual_output, expected_output);
-
+  console.log('hiss')
   assert(actual_output == expected_output, "Output did not match " + actual_output + ' ==> ' + expected_output)
 })
 
+incrementerBus.plug(inputUniverse);
 
 _.each(tests, function (expected_output, input) { 
-  inputBus.push(input.split(' '))
+  inputBus.push(input)
 })

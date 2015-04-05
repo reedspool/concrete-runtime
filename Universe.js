@@ -1,16 +1,22 @@
 var _ = require('lodash'),
     assert = require('assert'),
     config = require('./config.js'),
-    util = require('./util.js');
+    util = require('./util.js'),
+    Tape = require('./Tape.js');
 
-function makeUniverse(tape) {
-  var u = Object.create(myUni);
+function Universe() {}
+var __proto = new Universe();
+
+Universe.make = function (codez) {
+  util.log('codez: ' + codez)
+  var u = Object.create(__proto);
+  var tape = Tape.fromString(codez);
 
   u.tape = tape;
   u.__original = u;
 
   // There need be an END token
-  if (tape[tape.length - 1] != 'END') tape.push('END')
+  if (tape.get(tape.length() -1) != 'END') tape.set(tape.length(), 'END')
 
   // For now, a daemon is just a location
   u.daemon = 0;
@@ -18,24 +24,21 @@ function makeUniverse(tape) {
   return u;
 }
 
-function Universe() {}
-var myUni = new Universe();
-var SIDES =
 /**
  * Step the universe exactly once.
  */
 Universe.prototype.step = function () {
   var copy = this.copy();
-  var t1 = copy.tape.slice();
+  var t1 = copy.tape;
   var daemon = copy.daemon;
 
-  if (daemon >= t1.length) {
+  if (daemon >= t1.length()) {
     copy.alive = false;
     return copy;
   };
 
   // Get code at location
-  var code = t1[daemon].toString();
+  var code = t1.get(daemon).toString();
 
   var codeInfo = getCodeInfo(code)
 
@@ -43,7 +46,7 @@ Universe.prototype.step = function () {
 
   var inputBegin = daemon - codeInfo.inputs;
   var inputEnd = daemon
-  var inputs = t1.slice(inputBegin, inputEnd);
+  var inputs = t1.get(inputBegin, inputEnd - inputBegin);
 
   var newOutput = codeInfo.op(inputs);
 
@@ -57,22 +60,20 @@ Universe.prototype.step = function () {
   }
 
   var outputBegin = daemon + 1;
-  var outputEnd = outputBegin + codeInfo.out
-  var outputs = t1.slice(outputBegin, outputEnd);
-
-  var before = t1.slice(0, outputBegin);
-  var after = t1.slice(outputEnd);
-  var result = [before, newOutput || outputs, after].reduce(util.concat, [])
+  
+  if (newOutput) {
+    copy.tape.spliceArray(outputBegin, newOutput.length, newOutput)
+  }
 
   copy.daemon++;
-  copy.tape = result;
 
   return copy;
 }
 
 Universe.prototype.copy = function () { 
-  var u1 = makeUniverse(this.tape);
+  var u1 = Object.create(__proto)
 
+  u1.tape = this.tape.copy();
   u1.daemon = this.daemon;
   u1.alive = this.alive;
   u1.__original = this.__original;
@@ -132,5 +133,5 @@ function getCodeInfo(code) {
 }
 
 module.exports = {
-  create: makeUniverse
+  create: Universe.make
 }

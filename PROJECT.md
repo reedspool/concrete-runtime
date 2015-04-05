@@ -7,11 +7,11 @@
 
 
 ## Goals
-1. Turing Complete
+1. Turing Complete - Can we prove this?
 2. Fun
-3. Timing
-4. Memory
-5. Characters
+3. Timing - Each step at the current level of interest should take the same amt of time
+4. Memory - Leave the memory hanging out, show where stuff comes in
+5. Characters - Anthropomorphizing 
 
 ## Things to Implement
 + - * / % floor sin PI
@@ -21,8 +21,10 @@ copy{-2} copy{A} goto{B}
 _ 2#index
 
 ### Next steps
-* read text input from STDIN or arg
-* Make a simple way to unit test
+* read text input from STDIN
+* Read arguments from STDIN?
 * Build a legit math problem solver
 * IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!
-* Figure out time
+* Implement naming
+* Impelement pointers
+* Parse all input into bytecode?
