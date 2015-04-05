@@ -67,8 +67,11 @@ Universe.prototype.step = function () {
         end: function () {
           copy.alive = false;
         }, 
-        goto: function (offset) { 
-          copy.daemon = offset;
+        goto: function (location) { 
+          copy.daemon = location;
+        }, 
+        shift: function (offset) { 
+          copy.daemon += offset;
         }, 
         writeFromTo: function (from, to) { 
           t1.set(to, t1.get(from))
@@ -129,7 +132,7 @@ function getCodeInfo(code) {
       op: function (inputs) { 
           var result = parseInt(inputs[0], 10) > parseInt(inputs[1], 10);
 
-          return [result ? 'true' : 'false']
+          return [result ? true : false ]
         }
     },
     '?': {
@@ -147,6 +150,11 @@ function getCodeInfo(code) {
       inputs: 1,
       out: 0,
       sideEffects: function (sides, inputs) { sides.goto(parseInt(inputs[0])) }
+    },
+    'shift': {
+      inputs: 1,
+      out: 0,
+      sideEffects: function (sides, inputs) { sides.shift(parseInt(inputs[0])) }
     },
     'copy': {
       inputs: 2,

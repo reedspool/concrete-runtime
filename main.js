@@ -5,14 +5,12 @@ var Bacon = require('baconjs'),
     config = require('./config.js'),
     util = require('./util.js');
 
-var INPUT = '0 1 + _ 3 0 copy 0 goto';
+var INPUT = '0 1 + _ 5 > _ 5 0 ? _ shift 3 0 copy 0 goto';
 
-var inputTape = INPUT;
 function printUniverse(universe) {
   var word_beginning_indicis = [];
   var tape = universe.tape;
   var daemon = universe.daemon;
-
 
   if (daemon >= tape.length()) {
     return;
@@ -36,7 +34,8 @@ function printUniverse(universe) {
     _.range(daemonWord.index)
       .map(function () { return ' ' }).join('') + 
     _.range(daemonWord.length)
-      .map(function () { return '_' }).join(''))
+      .map(function () { return '_' }).join('')
+  )
 }
 
 function incrementUniverseUntilDone(u0) { 
@@ -58,8 +57,8 @@ var inputUniverse = inputBus.map(Universe.create);
 
 incrementerBus.onValue(incrementUniverseUntilDone)
 
-resultsBus.bufferingThrottle(750).onValue(printUniverse)
+resultsBus.bufferingThrottle(100).onValue(printUniverse)
 
 incrementerBus.plug(inputUniverse);
 
-inputBus.push(inputTape)
+inputBus.push(INPUT)

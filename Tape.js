@@ -9,13 +9,13 @@ var __proto = new Tape();
 
 function Tape() {}
 
-Tape.create = function (arr) {
+Tape.create = function (blocks) {
   var tape = Object.create(__proto);
 
-  tape.__arr = [];
+  tape.__blocks = [];
   tape.__history = [];
 
-  tape.spliceArray(0, 0, arr);
+  tape.spliceArray(0, 0, blocks);
 
   // There need be an END token
   if ( ! tape.contains('END') ) tape.set(tape.length(), 'END')
@@ -28,14 +28,14 @@ Tape.fromString = function (codez) {
 }
 
 Tape.prototype.contains = function(word) {
-  return this.__arr.indexOf(word) != -1;
+  return this.__blocks.indexOf(word) != -1;
 }
 
 Tape.prototype.splice = function() {
   this.updateHistory();
 
   // Pass through
-  return [].splice.apply(this.__arr, arguments);
+  return [].splice.apply(this.__blocks, arguments);
 };
 
 Tape.prototype.spliceArray = function (a, b, c) {
@@ -47,21 +47,21 @@ Tape.prototype.get = function(i, n) {
     return this.copy().splice(i, n)
   }
 
-  return this.__arr[i];
+  return this.__blocks[i];
 };
 
 Tape.prototype.set = function(i, val) {
   this.updateHistory();
 
-  this.__arr[i] = val;
+  this.__blocks[i] = val;
 };
 
 Tape.prototype.length = function() {
-  return this.__arr.length;
+  return this.__blocks.length;
 };
 
 Tape.prototype.toString = function() {
-  return this.__arr.join(' ')
+  return this.__blocks.join(' ')
 };
 
 Tape.prototype.updateHistory = function() {
@@ -69,5 +69,5 @@ Tape.prototype.updateHistory = function() {
 };
 
 Tape.prototype.copy = function() {
-  return Tape.create(this.__arr)
+  return Tape.create(this.__blocks)
 };

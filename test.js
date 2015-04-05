@@ -19,6 +19,8 @@ var tests = {
   '3 2 + _ END': '3 2 + 5 END',
   '3 2 > _ END': '3 2 > true END',
   'true 5 4 ? _ END': 'true 5 4 ? 5 END',
+  '0 1 + _ 5 > _ 5 0 ? _ shift 3 0 copy 0 goto END':
+    '5 1 + 6 5 > true 5 0 ? 5 shift 3 0 copy 0 goto END',
   '3 4 + _ 5 > _ bigger smaller ? _ END': '3 4 + 7 5 > true bigger smaller ? bigger END'
   //   // 'ptr{-1} END': '! Never terminates END',
   // '4#A A _ END': '4#A A 4 END'

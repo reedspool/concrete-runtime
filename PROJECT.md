@@ -22,9 +22,15 @@ _ 2#index
 
 ### Next steps
 * read text input from STDIN
-* Read arguments from STDIN?
+* Read arguments from STDIN
 * Build a legit math problem solver
-* IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!
 * Implement naming
-* Impelement pointers
-* Parse all input into bytecode?
+* Parse all input into bytecode
+* Separate logging of side effects/outputs from daemon movement
+* Separate Block impl
+* Make a block registry and factory
+* Separate daemon impl
+* Make a package.json file with dependencies and description
+
+### Future
+* IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!
