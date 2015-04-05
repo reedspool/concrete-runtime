@@ -17,14 +17,18 @@ Tape.create = function (arr) {
 
   tape.spliceArray(0, 0, arr);
 
+  // There need be an END token
+  if ( ! tape.contains('END') ) tape.set(tape.length(), 'END')
+
   return tape;
 }
 
 Tape.fromString = function (codez) { 
-
-  util.log('making tape from: ' + codez)
-
   return Tape.create(codez.split(' '))
+}
+
+Tape.prototype.contains = function(word) {
+  return this.__arr.indexOf(word) != -1;
 }
 
 Tape.prototype.splice = function() {

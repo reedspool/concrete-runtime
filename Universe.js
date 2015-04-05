@@ -8,15 +8,11 @@ function Universe() {}
 var __proto = new Universe();
 
 Universe.make = function (codez) {
-  util.log('codez: ' + codez)
   var u = Object.create(__proto);
   var tape = Tape.fromString(codez);
 
   u.tape = tape;
   u.__original = u;
-
-  // There need be an END token
-  if (tape.get(tape.length() -1) != 'END') tape.set(tape.length(), 'END')
 
   // For now, a daemon is just a location
   u.daemon = 0;
@@ -27,12 +23,18 @@ Universe.make = function (codez) {
 /**
  * Step the universe exactly once.
  */
+
+Universe.prototype.stepsTaken = 0;
+
 Universe.prototype.step = function () {
+  this.stepsTaken++;
+
   var copy = this.copy();
   var t1 = copy.tape;
   var daemon = copy.daemon;
 
-  if (daemon >= t1.length()) {
+  if (daemon >= t1.length() ||
+    this.stepsTaken >= config.MAX_UNIVERSE_STEPS) {
     copy.alive = false;
     return copy;
   };
@@ -51,21 +53,28 @@ Universe.prototype.step = function () {
   var newOutput = codeInfo.op(inputs);
 
 
-  if (codeInfo.sideEffects) {
-    codeInfo.sideEffects({
-        end: function () {
-          copy.alive = false;
-        }
-      });
-  }
 
   var outputBegin = daemon + 1;
-  
+
   if (newOutput) {
     copy.tape.spliceArray(outputBegin, newOutput.length, newOutput)
   }
 
   copy.daemon++;
+
+  if (codeInfo.sideEffects) {
+    codeInfo.sideEffects({
+        end: function () {
+          copy.alive = false;
+        }, 
+        goto: function (offset) { 
+          copy.daemon = offset;
+        }, 
+        writeFromTo: function (from, to) { 
+          t1.set(to, t1.get(from))
+        }
+      }, inputs);
+  }
 
   return copy;
 }
@@ -77,6 +86,7 @@ Universe.prototype.copy = function () {
   u1.daemon = this.daemon;
   u1.alive = this.alive;
   u1.__original = this.__original;
+  u1.stepsTaken = this.stepsTaken;
 
   return u1;
 }
@@ -121,6 +131,27 @@ function getCodeInfo(code) {
 
           return [result ? 'true' : 'false']
         }
+    },
+    '?': {
+      inputs: 3,
+      out: 1,
+      op: function (inputs) { 
+          var predicate = Boolean(inputs[0])
+          var yes = inputs[1];
+          var no = inputs[2];
+
+          return [ predicate ? yes : no ]
+        }
+    },
+    'goto': {
+      inputs: 1,
+      out: 0,
+      sideEffects: function (sides, inputs) { sides.goto(parseInt(inputs[0])) }
+    },
+    'copy': {
+      inputs: 2,
+      out: 0,
+      sideEffects: function (sides, inputs) { sides.writeFromTo(parseInt(inputs[0]), parseInt(inputs[1])) }
     },
     END: END
   };

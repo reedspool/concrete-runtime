@@ -5,21 +5,21 @@ var Bacon = require('baconjs'),
     config = require('./config.js'),
     util = require('./util.js');
 
-var INPUT = '1';
+var INPUT = '0 1 + _ 3 0 copy 0 goto';
 
-var inputTape = INPUT.split(' ');
+var inputTape = INPUT;
 function printUniverse(universe) {
   var word_beginning_indicis = [];
   var tape = universe.tape;
   var daemon = universe.daemon;
 
 
-  if (daemon >= tape.length) {
+  if (daemon >= tape.length()) {
     return;
   }
 
-  for (var i = 0, l = tape.length, index = 0; i < l; i++) {
-    var wordLength = tape[i].toString().length
+  for (var i = 0, l = tape.length(), index = 0; i < l; i++) {
+    var wordLength = tape.get(i).toString().length
     word_beginning_indicis.push({
       index: index,
       length: wordLength
@@ -30,9 +30,8 @@ function printUniverse(universe) {
 
   var daemonWord = word_beginning_indicis[daemon];
 
-
   util.log('\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n')
-  util.log(tape.join(' '));
+  util.log(tape.toString());
   util.log(
     _.range(daemonWord.index)
       .map(function () { return ' ' }).join('') + 
@@ -59,7 +58,7 @@ var inputUniverse = inputBus.map(Universe.create);
 
 incrementerBus.onValue(incrementUniverseUntilDone)
 
-resultsBus.bufferingThrottle(1000).onValue(printUniverse)
+resultsBus.bufferingThrottle(750).onValue(printUniverse)
 
 incrementerBus.plug(inputUniverse);
 
