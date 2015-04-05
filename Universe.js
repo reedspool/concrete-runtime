@@ -39,7 +39,7 @@ Universe.prototype.step = function () {
     copy.alive = false;
     return copy;
   };
-debugger
+  
   // Get code at location
   var block = t1.get(daemon);
 
