@@ -3,7 +3,7 @@ var _ = require('lodash'),
     config = require('./config.js'),
     util = require('./util.js');
 
-function makeUniverse(tape) { 
+function makeUniverse(tape) {
   var u = Object.create(myUni);
 
   u.tape = tape;
@@ -80,8 +80,6 @@ Universe.prototype.copy = function () {
 
 Universe.prototype.alive = true;
 
-
-
 function getCodeInfo(code) {
   var opcode = code;
   var base = {
@@ -112,6 +110,15 @@ function getCodeInfo(code) {
           return [parseInt(inputs[0], 10) + parseInt(inputs[1], 10)]
         }
     },
+    '>': {
+      inputs: 2,
+      out: 1,
+      op: function (inputs) { 
+          var result = parseInt(inputs[0], 10) > parseInt(inputs[1], 10);
+
+          return [result ? 'true' : 'false']
+        }
+    },
     END: END
   };
 
@@ -121,7 +128,6 @@ function getCodeInfo(code) {
 
   return _.extend(base, info);
 }
-
 
 module.exports = {
   create: makeUniverse

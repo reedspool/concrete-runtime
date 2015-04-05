@@ -5,6 +5,8 @@ var Bacon = require('baconjs'),
     config = require('./config.js'),
     util = require('./util.js');
 
+var INPUT = '0 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ END';
+
 function printUniverse(universe) {
   var word_beginning_indicis = [];
   var tape = universe.tape;
@@ -12,7 +14,6 @@ function printUniverse(universe) {
 
 
   if (daemon >= tape.length) {
-    util.log('DEAD');
     return;
   }
 
@@ -48,25 +49,16 @@ function incrementUniverseUntilDone(u0) {
 
 }
 
-function makeTape(d) { return d; }
-
-var inputUniverse = Bacon.fromArray(['0 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ END'.split(' ')])
-  .map(makeTape)
-  .map(Universe.create);
-
-var metronome = Bacon.sequentially(1000, function (d, i) { return d; })
-
+var inputBus = new Bacon.Bus();
 var incrementerBus = new Bacon.Bus();
-
 var resultsBus = new Bacon.Bus();
 
-
-// ??
+var inputUniverse = inputBus.map(Universe.create);
 
 incrementerBus.onValue(incrementUniverseUntilDone)
 
 resultsBus.bufferingThrottle(1000).onValue(printUniverse)
 
-
-
 incrementerBus.plug(inputUniverse);
+
+inputBus.push(INPUT.split(' '))
