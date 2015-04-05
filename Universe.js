@@ -7,6 +7,7 @@ function makeUniverse(tape) {
   var u = Object.create(myUni);
 
   u.tape = tape;
+  u.__original = u;
 
   // For now, a daemon is just a location
   u.daemon = 0;
@@ -74,6 +75,7 @@ Universe.prototype.copy = function () {
 
   u1.daemon = this.daemon;
   u1.alive = this.alive;
+  u1.__original = this.__original;
 
   return u1;
 }
