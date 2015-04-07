@@ -125,6 +125,22 @@ function getCodeInfo(word) {
         sides.writeFromTo(parseInt(inputs[0].getValue()), parseInt(inputs[1].getValue()))
       }
     },
+    'print': {
+      inputs: 1,
+      out: 0,
+      sideEffects: true,
+      op: function (inputs, sides) { 
+        sides.println(inputs[0].getValue())
+      }
+    },
+    '.': {
+      inputs: 1,
+      out: 0,
+      sideEffects: true,
+      op: function (inputs, sides) { 
+        sides.print(inputs[0].getValue())
+      }
+    },
     END: END
   };
 

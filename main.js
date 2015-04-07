@@ -3,62 +3,31 @@ var Bacon = require('baconjs'),
     assert = require('assert'),
     Universe = require('./Universe.js'),
     config = require('./config.js'),
-    util = require('./util.js');
+    util = require('./util.js'),
+    ConsoleUtilities = require('./ConsoleUtilities.js');
 
-var INPUT = '0 1 + _ 10 > _ 5 0 ? _ slide 3 0 copy 0 jump';
+// While loop
+// var INPUT = '0 1 + _ 10 > _ 5 0 ? _ slide 3 0 copy 0 jump';
 
-function printUniverse(universe) {
-  var word_beginning_indicis = [];
-  var tape = universe.tape;
-  var daemon = universe.daemon;
+var INTERVAL = 60;
+var INPUT = '0 1 + _ . , . _ . 1 0 copy 3 1 copy 0 1 + _ 20 > _ 5 0 ? _ slide 18 15 copy 0 jump'
 
-  if (daemon >= tape.length()) {
-    return;
+var universeStream = Bacon.fromBinder(function(sink) {
+  var universe = Universe.fromString(INPUT)
+
+  while (universe.alive) {
+    sink(universe.copy())
+    universe = universe.step();
   }
 
-  for (var i = 0, l = tape.length(), index = 0; i < l; i++) {
-    var wordLength = tape.get(i).toString().length
-    word_beginning_indicis.push({
-      index: index,
-      length: wordLength
-    })
+  return function() {
+    
+  };
+});
 
-    index += wordLength + 1;
-  }
-
-  var daemonWord = word_beginning_indicis[daemon];
-
-  util.log('\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n')
-  util.log(tape.toString());
-  util.log(
-    _.range(daemonWord.index)
-      .map(function () { return ' ' }).join('') + 
-    _.range(daemonWord.length)
-      .map(function () { return '_' }).join('')
-  )
-}
-
-function incrementUniverseUntilDone(u0) { 
-
-  resultsBus.push(u0)
-
-  var u1 = u0.step();
-
-  // If the universe is still alive, do it again
-  if (u1.alive) incrementerBus.push(u1);
-
-}
-
-var inputBus = new Bacon.Bus();
-var incrementerBus = new Bacon.Bus();
 var resultsBus = new Bacon.Bus();
 
-var inputUniverse = inputBus.map(Universe.fromString);
+resultsBus.plug(universeStream)
 
-incrementerBus.onValue(incrementUniverseUntilDone)
-
-resultsBus.bufferingThrottle(250).onValue(printUniverse)
-
-incrementerBus.plug(inputUniverse);
-
-inputBus.push(INPUT)
+resultsBus.bufferingThrottle(INTERVAL)
+  .onValue(ConsoleUtilities.printUniverse)

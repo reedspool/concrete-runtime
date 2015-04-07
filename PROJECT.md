@@ -19,6 +19,7 @@
 and or ? < > eq =
 copy{-2} copy{A} goto{B}
 _ 2#index
+"Hello World!" print append .
 
 ### Next steps
 * read text input from STDIN
@@ -33,6 +34,7 @@ _ 2#index
 * Make a package.json file with dependencies and description
 * Take out extraneous requires
 * Make a more rigorous typing system for Blocks
+* Fix this stupid call stack bug
 
 ### Future
 * IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!
