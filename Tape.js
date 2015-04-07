@@ -19,19 +19,23 @@ Tape.create = function (blocks) {
   tape.spliceArray(0, 0, blocks);
 
   // There need be an END token
-  if ( ! tape.contains('END') ) tape.set(tape.length(), Block.create('END'))
+  if ( ! tape.contains('END') ) tape.set(tape.length(), Block.fromString('END'))
 
   return tape;
 }
 
 Tape.fromString = function (codez) { 
-  return Tape.create(codez.split(' ')
-    .map(Block.create))
+  var words = codez.split(' ')
+  var blocks = words
+                .map(function (w) { return w.toString() })
+                .map(Block.fromString);
+
+  return Tape.create(blocks)
 }
 
 Tape.prototype.contains = function(word) {
   return this.__blocks.filter(function (d) { 
-    return d.toString() === word;
+    return d.matches(word);
   }).length > 0;
 }
 

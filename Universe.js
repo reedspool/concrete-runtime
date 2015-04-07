@@ -8,7 +8,7 @@ function Universe() {}
 module.exports = Universe
 var __proto = new Universe();
 
-Universe.create = function (codez) {
+Universe.fromString = function (codez) {
   var u = Object.create(__proto);
   var tape = Tape.fromString(codez);
 
@@ -31,46 +31,23 @@ Universe.prototype.step = function () {
   this.stepsTaken++;
 
   var copy = this.copy();
-  var t1 = copy.tape;
-  var daemon = copy.daemon;
 
-  if (daemon >= t1.length() ||
+  if (copy.daemon >= copy.tape.length() ||
     this.stepsTaken >= config.MAX_UNIVERSE_STEPS) {
     copy.alive = false;
     return copy;
   };
   
   // Get code at location
-  var block = t1.get(daemon);
+  var block = copy.tape.get(copy.daemon);
 
   var codeInfo = block.info;
 
-  var inputBegin = daemon - codeInfo.inputs;
-  var inputEnd = daemon
-  var inputs = t1.get(inputBegin, inputEnd - inputBegin);
+  var inputBegin = copy.daemon - codeInfo.inputs;
+  var inputs = copy.tape.get(inputBegin, copy.daemon - inputBegin);
 
 
-  var outputBegin = daemon + 1;
-
-  copy.daemon++;
-
-  var sideEffects = {
-    end: function () {
-      copy.alive = false;
-    }, 
-    goto: function (location) { 
-      copy.daemon = location;
-    }, 
-    shift: function (offset) { 
-      copy.daemon += offset;
-    }, 
-    writeFromTo: function (from, to) { 
-      t1.set(to, t1.get(from))
-    },
-    output: function (output) {
-      copy.tape.spliceArray(outputBegin, output.length, output)
-    }
-  }
+  var sideEffects = copy.sideEffects();
 
   if (codeInfo.sideEffects) {
     codeInfo.op(inputs, sideEffects);
@@ -78,7 +55,31 @@ Universe.prototype.step = function () {
     codeInfo.op(inputs, sideEffects.output)
   }
 
+  copy.daemon++;
+
   return copy;
+}
+
+Universe.prototype.sideEffects = function () { 
+  var self = this;
+
+  return {
+    end: function () {
+      self.alive = false;
+    }, 
+    jump: function (location) { 
+      self.daemon = location;
+    }, 
+    slide: function (offset) { 
+      self.daemon += offset;
+    }, 
+    writeFromTo: function (source, destination) { 
+      self.tape.set(destination, self.tape.get(source))
+    },
+    output: function (output) {
+      self.tape.spliceArray(self.daemon + 1, output.length, output)
+    }
+  }
 }
 
 Universe.prototype.copy = function () { 

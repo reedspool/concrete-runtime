@@ -19,10 +19,9 @@ var tests = {
   '3 2 + _ END': '3 2 + 5 END',
   '3 2 > _ END': '3 2 > true END',
   'true 5 4 ? _ END': 'true 5 4 ? 5 END',
-  '0 1 + _ 5 > _ 5 0 ? _ shift 3 0 copy 0 goto END':
-    '5 1 + 6 5 > true 5 0 ? 5 shift 3 0 copy 0 goto END',
+  '0 1 + _ 5 > _ 5 0 ? _ slide 3 0 copy 0 jump END':
+    '5 1 + 6 5 > true 5 0 ? 5 slide 3 0 copy 0 jump END',
   '3 4 + _ 5 > _ bigger smaller ? _ END': '3 4 + 7 5 > true bigger smaller ? bigger END'
-  //   // 'ptr{-1} END': '! Never terminates END',
   // '4#A A _ END': '4#A A 4 END'
 
 }
@@ -51,11 +50,11 @@ resultsBus.onValue(function (u1) {
   var actual_output = u1.tape.toString();
   var original_input = u1.__original.tape.toString();
   var expected_output = tests[original_input];
-  util.log(original_input, actual_output, expected_output);
+  util.log(actual_output, expected_output);
   assert(actual_output == expected_output, "Output did not match " + actual_output + ' ==> ' + expected_output)
 })
 
-incrementerBus.plug(inputBus.map(Universe.create));
+incrementerBus.plug(inputBus.map(Universe.fromString));
 
 _.each(tests, function (expected_output, input) { 
   inputBus.push(input)

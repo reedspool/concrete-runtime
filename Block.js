@@ -4,14 +4,36 @@ var _ = require('lodash'),
     util = require('./util.js');
 
 function Block() {}
+
 module.exports = Block
+
 var __proto = new Block();
 
-Block.create = function (code) {
+Block.create = function (word) {
   var block = Object.create(__proto);
 
-  block.__value = code;
-  block.info = getCodeInfo(code);
+  block.__value = word;
+  block.info = getCodeInfo(word);
+
+  return block;
+}
+
+Block.fromString = function (word) {
+  return Block.create(word);
+}
+
+Block.fromNumber = function (num) {
+  var block = Block.fromString(num + '')
+
+  block.__value = num;
+
+  return block;
+}
+
+Block.fromBoolean = function (bool) {
+  var block = Block.fromString(bool + '')
+
+  block.__value = bool;
 
   return block;
 }
@@ -24,9 +46,15 @@ Block.prototype.toString = function() {
   return this.__value.toString();
 };
 
+Block.prototype.matches = function(word) {
+  return this.toString() === word;
+};
 
-function getCodeInfo(code) {
-  var opcode = code;
+function getCodeInfo(word) {
+  var opcode = word;
+
+  if (word.match(config.VALUE_REGEX)) opcode = 'value';
+
   var base = {
     inputs: 0,
     out: 0,
@@ -37,8 +65,6 @@ function getCodeInfo(code) {
   var END = {
     sideEffects: function (sides) { sides.end(); }
   }
-
-  if (code.toString().match(config.VALUE_REGEX)) opcode = 'value';
   
   /**
    * Super shitty registry for now. create this dynamic so we can have modules
@@ -52,7 +78,7 @@ function getCodeInfo(code) {
       inputs: 2,
       out: 1,
       op: function (inputs, output) { 
-          output([parseInt(inputs[0].getValue(), 10) + parseInt(inputs[1].getValue(), 10)].map(Block.create))
+          output([parseInt(inputs[0].getValue(), 10) + parseInt(inputs[1].getValue(), 10)].map(Block.fromNumber))
         }
     },
     '>': {
@@ -61,7 +87,7 @@ function getCodeInfo(code) {
       op: function (inputs, output) { 
           var result = parseInt(inputs[0].getValue(), 10) > parseInt(inputs[1].getValue(), 10);
 
-          output([result ? true : false ].map(Block.create))
+          output([result ? true : false ].map(Block.fromBoolean))
         }
     },
     '?': {
@@ -72,23 +98,23 @@ function getCodeInfo(code) {
           var yes = inputs[1].getValue();
           var no = inputs[2].getValue();
 
-          output([ predicate ? yes : no ].map(Block.create))
+          output([ predicate ? yes : no ].map(Block.fromString))
         }
     },
-    'goto': {
+    'jump': {
       inputs: 1,
       out: 0,
       sideEffects: true,
       op: function (inputs, sides) { 
-        sides.goto(parseInt(inputs[0].getValue()))
+        sides.jump(parseInt(inputs[0].getValue()))
       }
     },
-    'shift': {
+    'slide': {
       inputs: 1,
       out: 0,
       sideEffects: true,
       op: function (inputs, sides) { 
-        sides.shift(parseInt(inputs[0].getValue()))
+        sides.slide(parseInt(inputs[0].getValue()))
       }
     },
     'copy': {

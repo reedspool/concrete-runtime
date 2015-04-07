@@ -5,7 +5,7 @@ var Bacon = require('baconjs'),
     config = require('./config.js'),
     util = require('./util.js');
 
-var INPUT = '0 1 + _ 5 > _ 5 0 ? _ shift 3 0 copy 0 goto';
+var INPUT = '0 1 + _ 10 > _ 5 0 ? _ slide 3 0 copy 0 jump';
 
 function printUniverse(universe) {
   var word_beginning_indicis = [];
@@ -53,11 +53,11 @@ var inputBus = new Bacon.Bus();
 var incrementerBus = new Bacon.Bus();
 var resultsBus = new Bacon.Bus();
 
-var inputUniverse = inputBus.map(Universe.create);
+var inputUniverse = inputBus.map(Universe.fromString);
 
 incrementerBus.onValue(incrementUniverseUntilDone)
 
-resultsBus.bufferingThrottle(100).onValue(printUniverse)
+resultsBus.bufferingThrottle(250).onValue(printUniverse)
 
 incrementerBus.plug(inputUniverse);
 
