@@ -8,8 +8,13 @@ function printUniverse(universe) {
   var lilConsole = universe.log.join('\n')
   var w = util.log;
 
-  if (daemon >= tape.length()) {
+  if ( ! universe.alive ) {
+    w('Done')
     return;
+  }
+
+  if (daemon < 0 || daemon >= tape.length()) {
+    w('Daemon outside boundaries!')
   }
 
   for (var i = 0, l = tape.length(), index = 0; i < l; i++) {

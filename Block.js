@@ -50,6 +50,11 @@ Block.prototype.matches = function(word) {
   return this.toString() === word;
 };
 
+Block.prototype.copy = function() {
+  // Cheapo implementation.
+  return Block.fromString(this.toString())
+};
+
 function getCodeInfo(word) {
   var opcode = word;
 
@@ -63,7 +68,8 @@ function getCodeInfo(word) {
   };
 
   var END = {
-    sideEffects: function (sides) { sides.end(); }
+    sideEffects: true,
+    op: function (input, sides) { sides.end(); }
   }
   
   /**
@@ -94,7 +100,7 @@ function getCodeInfo(word) {
       inputs: 3,
       out: 1,
       op: function (inputs, output) { 
-          var predicate = Boolean(inputs[0].getValue())
+          var predicate = util.parseBoolean(inputs[0].getValue())
           var yes = inputs[1].getValue();
           var no = inputs[2].getValue();
 

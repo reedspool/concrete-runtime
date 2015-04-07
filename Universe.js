@@ -13,12 +13,13 @@ Universe.create = function (tape) {
   var u = Object.create(__proto);
 
   u.tape = tape;
-  u.__original = u;
 
   // For now, a daemon is just a location
   u.daemon = 0;
 
   u.log = [];
+
+  u.__original = u;
 
   return u;
 }

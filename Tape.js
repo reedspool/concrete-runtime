@@ -40,10 +40,12 @@ Tape.prototype.contains = function(word) {
 }
 
 Tape.prototype.splice = function() {
+  // Pass through
+  var result = [].splice.apply(this.__blocks, arguments);
+
   this.updateHistory();
 
-  // Pass through
-  return [].splice.apply(this.__blocks, arguments);
+  return result;
 };
 
 Tape.prototype.spliceArray = function (a, b, c) {
@@ -79,5 +81,11 @@ Tape.prototype.updateHistory = function() {
 };
 
 Tape.prototype.copy = function() {
-  return Tape.create(this.__blocks)
+  var tape = Tape.create(this.__blocks.map(function (b) {
+      return b.copy();
+    }));
+
+  this.updateHistory();
+
+  return tape;
 };

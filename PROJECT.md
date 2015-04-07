@@ -24,17 +24,15 @@ _ 2#index
 ### Next steps
 * read text input from STDIN
 * Read arguments from STDIN
-* Build a legit math problem solver
 * Implement naming
-* Parse all input into bytecode
 * Separate logging timing of side effects/outputs from daemon movement
-* Separate Block impl
 * Make a block registry and factory
 * Separate daemon impl
 * Make a package.json file with dependencies and description
 * Take out extraneous requires
 * Make a more rigorous typing system for Blocks
-* Fix this stupid call stack bug
+* Implement strings
+* Implement folds and calling
 
 ### Future
 * IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!
