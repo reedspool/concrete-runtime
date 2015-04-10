@@ -15,7 +15,7 @@ Universe.create = function (tape) {
   u.tape = tape;
 
   // For now, a daemon is just a location
-  u.daemon = 0;
+  u.daemon = u.tape.getHandleAddress('FIRST');
 
   u.log = [];
 
@@ -41,7 +41,7 @@ Universe.prototype.step = function () {
 
   var copy = this.copy();
 
-  if (copy.daemon >= copy.tape.length() ||
+  if ( ! copy.tape.inBounds(copy.daemon) ||
     this.stepsTaken >= config.MAX_UNIVERSE_STEPS) {
 
     if (this.stepsTaken >= config.MAX_UNIVERSE_STEPS) {
@@ -57,9 +57,7 @@ Universe.prototype.step = function () {
 
   var codeInfo = block.info;
 
-  var inputBegin = copy.daemon - codeInfo.inputs;
-  var inputs = copy.tape.get(inputBegin, copy.daemon - inputBegin);
-
+  var inputs = copy.tape.get( copy.daemon, - codeInfo.inputs);
 
   var sideEffects = copy.sideEffects();
 
@@ -69,7 +67,7 @@ Universe.prototype.step = function () {
     codeInfo.op(inputs, sideEffects.output)
   }
 
-  copy.daemon++;
+  copy.daemon = copy.tape.next(copy.daemon);
 
   return copy;
 }
@@ -85,13 +83,22 @@ Universe.prototype.sideEffects = function () {
       self.daemon = location;
     }, 
     slide: function (offset) { 
-      self.daemon += offset;
-    }, 
+      self.daemon = self.tape.next(self.daemon, offset);
+    },
     writeFromTo: function (source, destination) { 
       self.tape.set(destination, self.tape.get(source))
     },
+    valueAtAddress: function (source) { 
+      return self.tape.get(source);
+    },
+    handleAddress: function (handle) { 
+      return self.tape.getHandleAddress(handle);
+    },
+    valueAtHandle: function (handle) { 
+      return self.tape.get(self.tape.getHandleAddress(handle));
+    },
     output: function (output) {
-      self.tape.spliceArray(self.daemon + 1, output.length, output)
+      self.tape.spliceArray(self.tape.next(self.daemon), output.length, output)
     },
     println: function (input) {
       self.println(input.toString())

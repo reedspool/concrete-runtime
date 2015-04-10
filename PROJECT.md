@@ -12,6 +12,7 @@
 3. Timing - Each step at the current level of interest should take the same amt of time
 4. Memory - Leave the memory hanging out, show where stuff comes in
 5. Characters - Anthropomorphizing 
+6. Honesty - Metaphors that reveal truth, not obscure it
 
 ## Things to Implement
 + - * / % floor sin PI
@@ -22,6 +23,7 @@ _ 2#index
 "Hello World!" print append .
 
 ### Next steps
+* Names are just aliases for addresses. 
 * read text input from STDIN
 * Read arguments from STDIN
 * Implement naming
@@ -33,6 +35,10 @@ _ 2#index
 * Make a more rigorous typing system for Blocks
 * Implement strings
 * Implement folds and calling
+* Use browserify or webpack to get this into the browser.
+* Make a web browser view and editor
+* Use a real unit testing framework
+* Separate Address
 
 ### Future
 * IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!

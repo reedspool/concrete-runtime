@@ -19,6 +19,7 @@ Block.create = function (word) {
 }
 
 Block.fromString = function (word) {
+  word.replace(/[#].*/g, '')
   return Block.create(word);
 }
 
@@ -129,6 +130,22 @@ function getCodeInfo(word) {
       sideEffects: true,
       op: function (inputs, sides) { 
         sides.writeFromTo(parseInt(inputs[0].getValue()), parseInt(inputs[1].getValue()))
+      }
+    },
+    'move': {
+      inputs: 2,
+      out: 0,
+      sideEffects: true,
+      op: function (inputs, sides) { 
+        sides.writeFromTo(sides.handleAddress(inputs[0].getValue()), sides.handleAddress(inputs[1].getValue()))
+      }
+    },
+    'get': {
+      inputs: 1,
+      out: 1,
+      sideEffects: true,
+      op: function (inputs, sides) { 
+        sides.output([sides.valueAtHandle(inputs[0].getValue()).copy()])
       }
     },
     'print': {
