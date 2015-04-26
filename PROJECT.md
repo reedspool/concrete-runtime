@@ -13,14 +13,23 @@
 4. Memory - Leave the memory hanging out, show where stuff comes in
 5. Characters - Anthropomorphizing 
 6. Honesty - Metaphors that reveal truth, not obscure it
+7. Helpful - Any block will tell you what its current job is, bug messages offer real steps towards help
 
-## Things to Implement
-+ - * / % floor sin PI
-0 1 2 3 5.12 true false
+## Implemented Operators
++
+0 1 2 3 ...
+true false
 and or ? < > eq =
-copy{-2} copy{A} goto{B}
+copy jump slide get move . print
 _ 2#index
-"Hello World!" print append .
+
+## To Implement
+- * / % floor sin PI
+"Hello World!" append
+dance draw 
+[ in _ _ + _ out ]#sum [ 3 4 5 6 7 ] @sum 0 reduce _
+[ 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 ]
+[ in _#n @n get _ 2 > _ 5 0 ? _ slide 1 out end @n @Fib call _#a @n 1 - @Fib call _#b #a #b + _ out ]#Fib 50 @Fib  _
 
 ### Next steps
 * Names are just aliases for addresses. 
@@ -34,11 +43,13 @@ _ 2#index
 * Take out extraneous requires
 * Make a more rigorous typing system for Blocks
 * Implement strings
+* Explore/ design folds & calling
 * Implement folds and calling
 * Use browserify or webpack to get this into the browser.
 * Make a web browser view and editor
 * Use a real unit testing framework
 * Separate Address
+* Make a trello board for this, post it in README
 
 ### Future
 * IMMUTABLES!!! IMMUTABLE UNIVERSES!!!!

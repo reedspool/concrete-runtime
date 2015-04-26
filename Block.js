@@ -88,11 +88,41 @@ function getCodeInfo(word) {
           output([parseInt(inputs[0].getValue(), 10) + parseInt(inputs[1].getValue(), 10)].map(Block.fromNumber))
         }
     },
+    '-': {
+      inputs: 2,
+      out: 1,
+      op: function (inputs, output) { 
+          output([parseInt(inputs[0].getValue(), 10) - parseInt(inputs[1].getValue(), 10)].map(Block.fromNumber))
+        }
+    },
+    '*': {
+      inputs: 2,
+      out: 1,
+      op: function (inputs, output) { 
+          output([parseInt(inputs[0].getValue(), 10) * parseInt(inputs[1].getValue(), 10)].map(Block.fromNumber))
+        }
+    },
+    '/': {
+      inputs: 2,
+      out: 1,
+      op: function (inputs, output) { 
+          output([parseInt(inputs[0].getValue(), 10) / parseInt(inputs[1].getValue(), 10)].map(Block.fromNumber))
+        }
+    },
     '>': {
       inputs: 2,
       out: 1,
       op: function (inputs, output) { 
           var result = parseInt(inputs[0].getValue(), 10) > parseInt(inputs[1].getValue(), 10);
+
+          output([result ? true : false ].map(Block.fromBoolean))
+        }
+    },
+    '<': {
+      inputs: 2,
+      out: 1,
+      op: function (inputs, output) { 
+          var result = parseInt(inputs[0].getValue(), 10) < parseInt(inputs[1].getValue(), 10);
 
           output([result ? true : false ].map(Block.fromBoolean))
         }

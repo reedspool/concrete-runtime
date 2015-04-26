@@ -17,7 +17,11 @@ var tests = {
 
   // Basic ops and values
   '3 2 + _ END': '3 2 + 5 END',
+  '3 2 - _ END': '3 2 - 1 END',
+  '3 2 * _ END': '3 2 * 6 END',
+  '3 2 / _ END': '3 2 / 1.5 END',
   '3 2 > _ END': '3 2 > true END',
+  '3 2 < _ END': '3 2 < false END',
   'true 5 4 ? _ END': 'true 5 4 ? 5 END',
 
   // Any kidn of whitespace will do
