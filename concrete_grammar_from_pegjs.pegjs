@@ -1,26 +1,10 @@
 /*
  * Started with Pegjs pegjs grammar
  *
- * [See here]()
+ * [See here](#!!!!#)
  */
 
 {
-  var OPS_TO_PREFIXED_TYPES = {
-    "$": "text",
-    "&": "simple_and",
-    "!": "simple_not"
-  };
-
-  var OPS_TO_SUFFIXED_TYPES = {
-    "?": "optional",
-    "*": "zero_or_more",
-    "+": "one_or_more"
-  };
-
-  var OPS_TO_SEMANTIC_PREDICATE_TYPES = {
-    "&": "semantic_and",
-    "!": "semantic_not"
-  };
 
   function filterEmptyStrings(array) {
     var result = [], i;
@@ -56,10 +40,10 @@
 
 /* ---- Syntactic Grammar ----- */
 
-Grammar
+Tape
   = __ blocks:(Block __)+ __ {
     return {
-      type:        "grammar",
+      type:        "tape",
       blocks:       extractList(blocks, 0)
     };
   }
@@ -82,19 +66,19 @@ CodePart
 
 Value
   = Number
-  / String
+  / StringLiteral
+  / Falsey
   / Address
 
 Fold
-  = "[" __ blocks:(Block __)+ __ "]" {
-    return {
-      type:        "fold",
-      blocks:       extractList(blocks, 0)
-    };
-  }
+  = "[" Tape "]"
+
+Falsey
+  = "!" Identifier
 
 Operator
-  = op:[+\-%/!\.] {
+  = Identifier
+  / op:[+\-%/!\.] {
     return {
       type: "operator",
       op: op
@@ -102,7 +86,7 @@ Operator
   }
 
 NamePart
- = SourceCharacter
+ = Identifier
 
 Blank
   = "_"
@@ -112,18 +96,11 @@ End
 
 Number
   = num:[0-9]+ {
-    //Halfway to more numbers /(([0-9]+)|([0-9]+(.[0-9]+))|([0-9]+[eE][0-9]+)
+    // Got Halfway to more numbers and stopped
+    // /(([0-9]+)|([0-9]+(.[0-9]+))|([0-9]+[eE][0-9]+)
     return {
       type: "number",
       value: parseInt(num.join(''), 10)
-    }
-  }
-
-String
-  = "\"" contents:SourceCharacter* "\"" {
-    return {
-      type: "string",
-      contents: contents
     }
   }
 
@@ -259,15 +236,6 @@ NullLiteral
 BooleanLiteral
   = TrueToken
   / FalseToken
-
-LiteralMatcher "literal"
-  = value:StringLiteral ignoreCase:"i"? {
-      return {
-        type:       "literal",
-        value:      value,
-        ignoreCase: ignoreCase !== null
-      };
-    }
 
 StringLiteral "string"
   = '"' chars:DoubleStringCharacter* '"' { return chars.join(""); }
