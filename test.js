@@ -24,7 +24,7 @@ var tests = {
   '3 2 < _ END': '3 2 < false END',
   'true 5 4 ? _ END': 'true 5 4 ? 5 END',
 
-  // Any kidn of whitespace will do
+  // Any kind of whitespace will do
   '3 2 +        _ END': '3 2 +        5 END',
   '3 2 +   \t\n     _ END': '3 2 +   \t\n     5 END',
 
@@ -46,9 +46,12 @@ var tests = {
   // Names
   '4#A A get _ END': '4#A A get 4 END',
 
-  // Fibs with names... lots of philosphical problems when you introduce names...
+  // Fibs with names... lots of philosophical problems when you introduce names...
   '0#A 1#B + _#C C . , . _ . B A move C B move 0#I 1 + _#J 20 > _ 5 0 ? _ slide J I move 0 jump END':
     '10946#A 17711#B + 17711#C C . , . _ . B A move C B move 20#I 1 + 21#J 20 > true 5 0 ? 5 slide J I move 0 jump END',
+
+  // Composed Folds parse
+  "[ 3 3 [ 4 4 ] 3 ] END": "[ 3 3 [ 4 4 ] 3 ] END"
 }
 
 Bacon.fromArray(_.keys(tests))

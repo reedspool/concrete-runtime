@@ -71,14 +71,19 @@ Value
   / Address
 
 Fold
-  = "[" Tape "]"
+  = "[" tape:Tape "]" {
+    return {
+      type: "fold",
+      tape: tape
+    }
+  }
 
 Falsey
   = "!" Identifier
 
 Operator
   = Identifier
-  / op:[+\-%/!\.] {
+  / op:[+\-\?%/!\.><|&] {
     return {
       type: "operator",
       op: op
@@ -105,7 +110,16 @@ Number
   }
 
 Address
-  = "@" hex:[a-fA-F0-9]+ {
+  = "@" Identifier {
+    return {
+      type: "address",
+      hex: hex[0]
+    }
+  }
+
+// Trying to decide between named addresses and hex address syntax hm
+NamedAddress
+  = "@@" hex:[a-fA-F0-9]+ {
     return {
       type: "address",
       hex: hex[0]
