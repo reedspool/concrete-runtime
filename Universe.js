@@ -53,10 +53,12 @@ Universe.prototype.step = function () {
   };
   
   // Get code at location
+  // TODO: Daemon must be an internal address, so get will not do.
   var block = copy.tape.get(copy.daemon);
 
   var codeInfo = block.info;
 
+  // REWRITE w Static Block 
   var inputs = copy.tape.get( copy.daemon, - codeInfo.inputs);
 
   var sideEffects = copy.sideEffects();

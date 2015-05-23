@@ -2,6 +2,7 @@ var _ = require('lodash'),
     assert = require('assert'),
     config = require('./config.js'),
     util = require('./util.js'),
+    Parser = require('./ConcreteParser.js'),
     Block = require('./Block.js');
 
 module.exports = Tape
@@ -10,81 +11,53 @@ var __proto = new Tape();
 
 function Tape() {}
 
-function __addressToI(address) { 
+function __addressToInternal(address) { 
   return address * -1;
 }
 
-function __iToAddress(i) {
+function __internalToAddress(i) {
   return i * -1;
 }
 
 Tape.create = function (blocks) {
   var tape = Object.create(__proto);
 
-  tape.__mess = true;
+  tape.__blocks = blocks;
 
-  tape.__blocks = [];
-  tape.__history = [];
+  // TODO: REGISTER ALL HANDLEZ by scanning blocks
+  
   tape.__handles = {
-    FIRST: 0,
-    LAST: 0
+    
   };
-
-  tape.spliceArray(0, 0, blocks);
 
   // There need be an END token
   if ( ! tape.contains('END') ) tape.set(tape.length(), Block.fromString('END'))
-
-  tape.__mess = false;
-  tape.dirty();
 
   return tape;
 }
 
 Tape.fromString = function (codez) { 
-  var words = codez.split(config.WORD_DELIM);
+  var blocks = Parser.parse(codez).blocks;
 
-
-  var namesplit = words.map(function (w) { 
-      return w.split(config.NAME_DELIM)
-  })
-
-  var blocks = namesplit.map(function (split) { 
-    return split[0];
-  }).map(Block.fromString)
-
-  var tape = Tape.create(blocks)
-
-  namesplit.map(function (split) { 
-    return split[1];
-  }).forEach(function (handle, i) { 
-    if ( ! handle ) return;
-
-    tape.setHandleAddress(handle, __iToAddress(i))
-  })
-
-
-  return tape;
+  return this.create(blocks);
 }
 
 Tape.prototype.getHandleAddress = function(handle) {
-  return __iToAddress(this.__handles[handle])
+  return __internalToAddress(this.__handles[handle])
 };
 
 Tape.prototype.setHandleAddress = function(handle, address) {
-  this.__handles[handle] = __addressToI(address)
-
-  this.dirty();
+  this.__handles[handle] = __addressToInternal(address)
 };
 
 Tape.prototype.inBounds = function(address) {
-  var x = __addressToI(address);
+  var x = __addressToInternal(address);
 
   return x >= 0 && x < this.length();
 };
 
 Tape.prototype.getAddressIndex = function (address) {
-  return __addressToI(address)
+  return __addressToInternal(address)
 }
 
 Tape.prototype.contains = function(word) {
@@ -95,13 +68,11 @@ Tape.prototype.contains = function(word) {
 
 Tape.prototype.splice = function(address, n, stuff) {
   // Pass through
-  var i = __addressToI(address);
+  var i = __addressToInternal(address);
 
   arguments[0] = i;
 
   var result = [].splice.apply(this.__blocks, arguments);
-
-  this.dirty();
 
   return result;
 };
@@ -115,7 +86,7 @@ Tape.prototype.forEach = function(fn) {
 };
 
 Tape.prototype.previous = function(address, n) {
-  var addr = __iToAddress(__addressToI(address) - 1);
+  var addr = __internalToAddress(__addressToInternal(address) - 1);
 
   if (n && n > 1) return this.previous(addr, n - 1);
 
@@ -123,7 +94,7 @@ Tape.prototype.previous = function(address, n) {
 };
 
 Tape.prototype.next = function(address, n) {
-  var addr = __iToAddress(__addressToI(address) + 1);
+  var addr = __internalToAddress(__addressToInternal(address) + 1);
 
   if (n) return this.next(addr, n - 1);
 
@@ -131,7 +102,7 @@ Tape.prototype.next = function(address, n) {
 };
 
 Tape.prototype.get = function(address, n) {
-  var i = __addressToI(address)
+  var i = __addressToInternal(address)
 
   if (typeof n !== 'undefined') {
     if (n < 0) {
@@ -146,9 +117,7 @@ Tape.prototype.get = function(address, n) {
 };
 
 Tape.prototype.set = function(address, block) {
-  var i = __addressToI(address)
-
-  this.dirty();
+  var i = __addressToInternal(address)
 
   this.__blocks[i] = block;
 };
@@ -162,10 +131,8 @@ Tape.prototype.toString = function() {
 
   var handlePositions = [];
 
-  _.each(self.__handles, function (val, key) { 
-    if (key == 'LAST' || key == 'FIRST') return;
-
-    handlePositions[val] = key;
+  _.each(self.__handles, function (key, val) { 
+    handlePositions[key] = val;
   })
 
   return self.__blocks
@@ -176,22 +143,12 @@ Tape.prototype.toString = function() {
     .join(' ')
 };
 
-Tape.prototype.dirty = function() {
-  if (this.__mess) return;
-
-  this.__handles.LAST = this.length() - 1;
-
-  this.__history.push(this.toString());
-};
-
 Tape.prototype.copy = function() {
   var tape = Tape.create(this.__blocks.map(function (b) {
       return b.copy();
     }));
 
   tape.__handles = this.__handles;
-
-  this.dirty();
 
   return tape;
 };
