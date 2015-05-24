@@ -3,6 +3,7 @@ var _ = require('lodash'),
     config = require('./config.js'),
     util = require('./util.js'),
     Parser = require('./ConcreteParser.js'),
+    Immutable = require('immutable'),
     Block = require('./Block.js');
 
 module.exports = Tape
@@ -11,144 +12,125 @@ var __proto = new Tape();
 
 function Tape() {}
 
-function __addressToInternal(address) { 
-  return address * -1;
+function __isHandle(location) {
+  return location.__isHandle
 }
 
-function __internalToAddress(i) {
-  return i * -1;
+function __createHandle(tape, name) {
+  return Immutable.Map({
+    __isHandle: true,
+    name: name,
+    tape: tape
+  })
 }
 
-Tape.create = function (blocks) {
-  var tape = Object.create(__proto);
+function __createOffset(tape, index) {
+  return Immutable.Map({
+    offset: index,
+    tape: tape
+  })
+}
 
-  tape.__blocks = blocks;
+function __getLocationIndex(tape, location) {
+  var index;
 
-  // TODO: REGISTER ALL HANDLEZ by scanning blocks
-  
-  tape.__handles = {
-    
-  };
+  if (__isHandle(location)) {
+    index = tape.getIn(['__handles', location.get('handle')])
+  } else {
+    index = location.get('offset')
+  }
+
+  return index;
+}
+
+Tape.create = function (tape) {
+  // Scan (top level) blocks for handles
+  var handles = tape.blocks.reduce(function (memo, block, index) {
+    if (block.name) memo[block.name] = index;
+    return memo;
+  }, {})
+
+  var tape = Immutable.fromJS({
+    original: tape.original,
+    blocks: tape.blocks,
+    __isTape: true,
+    __handles: handles
+  })
 
   // There need be an END token
-  if ( ! tape.contains('END') ) tape.set(tape.length(), Block.fromString('END'))
+  if ( ! Tape.contains(tape, 'END') ) {
+    tape = tape.updateIn(['blocks'], function (blocks) {
+      blocks.push(Block.fromString('END'))
+    });
+  }
 
   return tape;
 }
 
-Tape.fromString = function (codez) { 
-  var blocks = Parser.parse(codez).blocks;
+Tape.fromString = function (original_code) { 
+  var tape = Parser.parse(original_code);
 
-  return this.create(blocks);
+  return Tape.create(tape);
 }
 
-Tape.prototype.getHandleAddress = function(handle) {
-  return __internalToAddress(this.__handles[handle])
-};
-
-Tape.prototype.setHandleAddress = function(handle, address) {
-  this.__handles[handle] = __addressToInternal(address)
-};
-
-Tape.prototype.inBounds = function(address) {
-  var x = __addressToInternal(address);
-
-  return x >= 0 && x < this.length();
-};
-
-Tape.prototype.getAddressIndex = function (address) {
-  return __addressToInternal(address)
+Tape.beginning = function(tape) {
+  return __createOffset(tape, 0)
 }
 
-Tape.prototype.contains = function(word) {
-  return this.__blocks.filter(function (d) { 
-    return d.matches(word);
+Tape.next = function(location, n) {
+  n = n || 1;
+
+  var index = __getLocationIndex(location) + n;
+
+  if ( ! Tape.inBounds(index)) {
+    return; // Need better badstate handling
+  }
+
+  return __createOffset(location.tape, index);
+}
+
+Tape.previous = function(location) {
+  return Tape.next(location, -1)
+}
+
+Tape.inBounds = function(location) {
+  var x = __locationToInternalIndex(location);
+
+  return x >= 0 && x < location.tape.get('blocks').size;
+};
+
+Tape.contains = function(tape, block) {
+  return tape.get('blocks').filter(function (d) { 
+    return Block.matches(block, d)
   }).length > 0;
 }
 
-Tape.prototype.splice = function(address, n, stuff) {
-  // Pass through
-  var i = __addressToInternal(address);
+Tape.getBlock = function(location) {
+  var index = __getLocationIndex(location);
 
-  arguments[0] = i;
-
-  var result = [].splice.apply(this.__blocks, arguments);
-
-  return result;
-};
-
-Tape.prototype.spliceArray = function (a, b, c) {
-  this.splice.apply(this, [a, b].concat(c))
+  return location.tape.getIn(['blocks', index]);
 }
 
-Tape.prototype.forEach = function(fn) {
-  this.__blocks.forEach(fn)
-};
+Tape.setBlock = function(location, block) {
+  var index = __getLocationIndex(location);
 
-Tape.prototype.previous = function(address, n) {
-  var addr = __internalToAddress(__addressToInternal(address) - 1);
+  return location.tape.setIn(['blocks', index], block);
+}
 
-  if (n && n > 1) return this.previous(addr, n - 1);
-
-  return addr;
-};
-
-Tape.prototype.next = function(address, n) {
-  var addr = __internalToAddress(__addressToInternal(address) + 1);
-
-  if (n) return this.next(addr, n - 1);
-
-  return addr;
-};
-
-Tape.prototype.get = function(address, n) {
-  var i = __addressToInternal(address)
-
-  if (typeof n !== 'undefined') {
-    if (n < 0) {
-      n = n * -1;
-      address = this.previous(address, n); 
-    }
-
-    return this.copy().splice(address, n)
-  }
-
-  return this.__blocks[i];
-};
-
-Tape.prototype.set = function(address, block) {
-  var i = __addressToInternal(address)
-
-  this.__blocks[i] = block;
-};
-
-Tape.prototype.length = function() {
-  return this.__blocks.length;
-};
-
-Tape.prototype.toString = function() {
-  var self = this;
+Tape.toString = function(tape) {
+  var self = tape;
 
   var handlePositions = [];
 
-  _.each(self.__handles, function (key, val) { 
+  self.get('__handles').forEach(function (key, val) { 
     handlePositions[key] = val;
   })
 
-  return self.__blocks
-    .map(function (block) { return block.toString() })
+  return self.get('blocks')
+    .map(function (block) { return Block.toString(block) })
     .map(function (block, i) { return handlePositions[i] 
                                       ? block + '#' + handlePositions[i] 
                                       : block; })
     .join(' ')
-};
+}
 
-Tape.prototype.copy = function() {
-  var tape = Tape.create(this.__blocks.map(function (b) {
-      return b.copy();
-    }));
-
-  tape.__handles = this.__handles;
-
-  return tape;
-};

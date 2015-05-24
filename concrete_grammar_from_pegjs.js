@@ -37,7 +37,8 @@ module.exports = (function() {
         peg$c2 = function(blocks) {
             return {
               type:        "tape",
-              blocks:       extractList(blocks, 0)
+              original_input:       text(),
+              blocks:      extractList(blocks, 0)
             };
           },
         peg$c3 = null,
@@ -86,10 +87,10 @@ module.exports = (function() {
           },
         peg$c24 = "@",
         peg$c25 = { type: "literal", value: "@", description: "\"@\"" },
-        peg$c26 = function() {
+        peg$c26 = function(id) {
             return {
               type: "address",
-              hex: hex[0]
+              id: id[0]
             }
           },
         peg$c27 = "@@",
@@ -806,7 +807,7 @@ module.exports = (function() {
         s2 = peg$parseIdentifier();
         if (s2 !== peg$FAILED) {
           peg$reportedPos = s0;
-          s1 = peg$c26();
+          s1 = peg$c26(s2);
           s0 = s1;
         } else {
           peg$currPos = s0;

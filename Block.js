@@ -1,7 +1,7 @@
 var _ = require('lodash'),
-    assert = require('assert'),
     config = require('./config.js'),
-    util = require('./util.js');
+    util = require('./util.js'),
+    Address = require('./Address.js');
 
 function Block() {}
 
@@ -9,52 +9,46 @@ module.exports = Block
 
 var __proto = new Block();
 
-Block.create = function (word) {
-  var block = Object.create(__proto);
+function Code() {};
 
-  block.__value = word;
-  block.info = getCodeInfo(word);
+var __proto = new Code();
 
-  return block;
+Block.toString = function(block) {
+  var str;
+  var code = block.code;
+
+  switch(code.type) {
+    case undefined:  // Literal
+      str = code;
+      break;
+    case "fold": 
+      str = code.tape.blocks
+            .map(Block.toString)
+            .join(' ')
+      break;
+    case "number": 
+      str = code.value
+      break;
+    case "operator":
+      str = code.op
+      break;
+    case "address":
+      str = '@' + code.value
+      break;
+    case "string":
+      str = '"' + code.value + '"'
+      break;
+    case "falsey":
+      str = '!' + Block.toString(code.value)
+      break;
+  }
+
+  return str;
 }
 
-Block.fromString = function (word) {
-  word.replace(/[#].*/g, '')
-  return Block.create(word);
+Block.getInfo = function (block) {
+  return getCodeInfo(block.code.type)
 }
-
-Block.fromNumber = function (num) {
-  var block = Block.fromString(num + '')
-
-  block.__value = num;
-
-  return block;
-}
-
-Block.fromBoolean = function (bool) {
-  var block = Block.fromString(bool + '')
-
-  block.__value = bool;
-
-  return block;
-}
-
-Block.prototype.getValue = function() {
-  return this.__value;
-};
-
-Block.prototype.toString = function() {
-  return this.__value.toString();
-};
-
-Block.prototype.matches = function(word) {
-  return this.toString() === word;
-};
-
-Block.prototype.copy = function() {
-  // Cheapo implementation.
-  return Block.fromString(this.toString())
-};
 
 function getCodeInfo(word) {
   var opcode = word;

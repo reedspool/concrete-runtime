@@ -44,7 +44,8 @@ Tape
   = __ blocks:(Block __)+ __ {
     return {
       type:        "tape",
-      blocks:       extractList(blocks, 0)
+      original:    text(),
+      blocks:      extractList(blocks, 0)
     };
   }
 
@@ -52,6 +53,8 @@ Block
   = code:CodePart name:("#" NamePart)? {
     return {
       type:        "block",
+
+      original:    text(),
       name:        extractOptional(name, 1),
       code:        code
     };
@@ -66,7 +69,7 @@ CodePart
 
 Value
   = Number
-  / StringLiteral
+  / StringLittteral
   / Falsey
   / Address
 
@@ -109,11 +112,17 @@ Number
     }
   }
 
+StringLittteral
+  = str:StringLiteral {
+    type: "string",
+    value: str
+  }
+
 Address
-  = "@" Identifier {
+  = "@" id:Identifier {
     return {
       type: "address",
-      hex: hex[0]
+      id: id[0]
     }
   }
 

@@ -15,11 +15,11 @@ Universe.create = function (tape) {
   u.tape = tape;
 
   // For now, a daemon is just a location
-  u.daemon = u.tape.getHandleAddress('FIRST');
+  u.daemon = Tape.beginning(u.tape);
 
   u.log = [];
 
-  u.__original = u;
+  u.history = [];
 
   return u;
 }
@@ -37,15 +37,22 @@ Universe.fromString = function (codez) {
 Universe.prototype.stepsTaken = 0;
 
 Universe.prototype.step = function () {
-  this.stepsTaken++;
+  var steps = this.stepsTaken++;
 
-  var copy = this.copy();
+  this.record();
 
-  if ( ! copy.tape.inBounds(copy.daemon) ||
-    this.stepsTaken >= config.MAX_UNIVERSE_STEPS) {
+  var daemon = this.daemon;
 
-    if (this.stepsTaken >= config.MAX_UNIVERSE_STEPS) {
+  if ( ! Tape.inBounds(daemon) ||
+    steps >= config.MAX_UNIVERSE_STEPS) {
+
+    if (steps >= config.MAX_UNIVERSE_STEPS) {
       util.log("Maximum allowed steps exceeded, good bye.")
+    }
+
+    if ( ! Tape.inBounds(daemon) ) {
+      util.log("Tape out of bounds :-/")
+      util.log(daemon)
     }
 
     copy.alive = false;
@@ -54,24 +61,27 @@ Universe.prototype.step = function () {
   
   // Get code at location
   // TODO: Daemon must be an internal address, so get will not do.
-  var block = copy.tape.get(copy.daemon);
+  var block = Tape.getBlock(daemon);
 
-  var codeInfo = block.info;
+  var blockInfo = Block.getInfo(block);
 
-  // REWRITE w Static Block 
-  var inputs = copy.tape.get( copy.daemon, - codeInfo.inputs);
+  var inputs = Tape.getBlocks(daemon, blockInfo.inputs * -1)
+                  .map(Block.getValue);
 
-  var sideEffects = copy.sideEffects();
+  var sideEffects = this.sideEffects();
 
-  if (codeInfo.sideEffects) {
-    codeInfo.op(inputs, sideEffects);
+  if (blockInfo.sideEffects) {
+    blockInfo.op(inputs, _.extend(sideEffects, accessors);
   } else {
-    codeInfo.op(inputs, sideEffects.output)
+    // Reduce privilege to only output
+    blockInfo.op(inputs, _.extend({
+      output: sideEffects.output
+    }, accessors))
   }
 
-  copy.daemon = copy.tape.next(copy.daemon);
+  daemon = Tape.next(daemon);
 
-  return copy;
+  return this;
 }
 
 Universe.prototype.sideEffects = function () { 
@@ -81,26 +91,14 @@ Universe.prototype.sideEffects = function () {
     end: function () {
       self.alive = false;
     }, 
-    jump: function (location) { 
-      self.daemon = location;
-    }, 
-    slide: function (offset) { 
-      self.daemon = self.tape.next(self.daemon, offset);
+    jump: function (handleOrOffset) {
+      self.daemon = Tape.handleOrOffset(self.daemon, handleOrOffset);
     },
     writeFromTo: function (source, destination) { 
-      self.tape.set(destination, self.tape.get(source))
-    },
-    valueAtAddress: function (source) { 
-      return self.tape.get(source);
-    },
-    handleAddress: function (handle) { 
-      return self.tape.getHandleAddress(handle);
-    },
-    valueAtHandle: function (handle) { 
-      return self.tape.get(self.tape.getHandleAddress(handle));
+      self.tape = Tape.set(destination, Tape.get(source))
     },
     output: function (output) {
-      self.tape.spliceArray(self.tape.next(self.daemon), output.length, output)
+      self.tape = Tape.spliceArray(Tape.next(self.daemon), output.length, output)
     },
     println: function (input) {
       self.println(input.toString())
@@ -109,6 +107,10 @@ Universe.prototype.sideEffects = function () {
       self.print(input.toString())
     },
   }
+}
+
+Universe.prototype.record = function () {
+  this.history.push(this.tape);
 }
 
 Universe.prototype.println = function (input) {
@@ -122,19 +124,6 @@ Universe.prototype.print = function (input) {
   last += input;
 
   this.println(last);
-}
-
-Universe.prototype.copy = function () { 
-  var u1 = Object.create(__proto)
-
-  u1.tape = this.tape.copy();
-  u1.daemon = this.daemon;
-  u1.alive = this.alive;
-  u1.__original = this.__original;
-  u1.stepsTaken = this.stepsTaken;
-  u1.log = this.log.slice();
-
-  return u1;
 }
 
 Universe.prototype.alive = true;
