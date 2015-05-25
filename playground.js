@@ -12,6 +12,17 @@ var Bacon = require('baconjs'),
     Universe = require('./Universe.js'),
     config = require('./config.js'),
     util = require('./util.js'),
-    Tape = require('./Tape.js')
+    Tape = require('./Tape.js'),
+    Parser = require('./ConcreteParser.js')
 
-debugger;
+
+var Universe = Universe.fromString('0#A 1 + _#B 30 > _ 4 0 ? _ jump @B @A move 0 jump')
+try { 
+  debugger
+  while (Universe.alive) {
+    Universe.step()
+  }
+} catch (e) { 
+  debugger;
+  console.log(e.stack)
+}

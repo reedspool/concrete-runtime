@@ -82,11 +82,16 @@ Fold
   }
 
 Falsey
-  = "!" Identifier
+  = "!" value:Block {
+    return {
+      type: 'falsey',
+      value: value
+    }
+  }
 
 Operator
   = Identifier
-  / op:[+\-\?%/!\.><|&] {
+  / op:[+\-\?%*/!\.><|&] {
     return {
       type: "operator",
       op: op
@@ -103,26 +108,28 @@ End
   = "END"
 
 Number
-  = num:[0-9]+ {
+  = neg:("-")? num:[0-9]+ {
     // Got Halfway to more numbers and stopped
     // /(([0-9]+)|([0-9]+(.[0-9]+))|([0-9]+[eE][0-9]+)
     return {
       type: "number",
-      value: parseInt(num.join(''), 10)
+      value: parseInt(num.join(''), 10) * (extractOptional(neg, 0) ? -1 : 1)
     }
   }
 
 StringLittteral
   = str:StringLiteral {
-    type: "string",
-    value: str
+    return {
+      type: "string",
+      value: str
+    }
   }
 
 Address
-  = "@" id:Identifier {
+  = "@" value:Identifier {
     return {
       type: "address",
-      id: id[0]
+      value: value[0]
     }
   }
 

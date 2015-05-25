@@ -9,8 +9,9 @@ var Bacon = require('baconjs'),
 // var INPUT = '0 1 + _ 10 > _ 5 0 ? _ slide 3 0 copy 0 jump';
 
 var INTERVAL = 60;
-var INPUT = '0 1 + _ . "," . _ . -1 0 copy -3 -1 copy 0 1 + _ 15 > _ 4 0 ? _ slide -18 -15 copy 0 jump END'
+var INPUT =   '0#A 1 + _#B 5 > _ 6 0 ? _ jump @B @A move @A jump'
 
 BaconUniverse.asStream(Universe.fromString(INPUT))
+  .filter(function (d) { return !(d[0] && d[0] == '<no-more>'); })
   .bufferingThrottle(INTERVAL)
   .onValue(ConsoleUtilities.printUniverse)

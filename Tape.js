@@ -13,29 +13,31 @@ var __proto = new Tape();
 function Tape() {}
 
 function __isHandle(location) {
-  return location.__isHandle
+  if(!location) debugger; /* TESTING - Delete me */
+  return location.get('type') == 'handle'
 }
 
-function __createHandle(tape, name) {
+function __createHandleLocation(tape, name) {
   return Immutable.Map({
-    __isHandle: true,
+    type: 'handle',
     name: name,
     tape: tape
   })
 }
 
-function __createOffset(tape, index) {
+function __createOffsetLocation(tape, index) {
   return Immutable.Map({
+    type: 'offset',
     offset: index,
     tape: tape
   })
 }
 
-function __getLocationIndex(tape, location) {
+function __getLocationIndex(location) {
   var index;
 
   if (__isHandle(location)) {
-    index = tape.getIn(['__handles', location.get('handle')])
+    index = location.get('tape').getIn(['__handles', location.get('name')])
   } else {
     index = location.get('offset')
   }
@@ -43,38 +45,39 @@ function __getLocationIndex(tape, location) {
   return index;
 }
 
-Tape.create = function (tape) {
+Tape.create = function (parsed) {
   // Scan (top level) blocks for handles
-  var handles = tape.blocks.reduce(function (memo, block, index) {
+  var handles = parsed.blocks.reduce(function (memo, block, index) {
     if (block.name) memo[block.name] = index;
     return memo;
   }, {})
 
   var tape = Immutable.fromJS({
-    original: tape.original,
-    blocks: tape.blocks,
+    original: parsed.original,
+    blocks: parsed.blocks,
     __isTape: true,
     __handles: handles
   })
 
   // There need be an END token
-  if ( ! Tape.contains(tape, 'END') ) {
-    tape = tape.updateIn(['blocks'], function (blocks) {
-      blocks.push(Block.fromString('END'))
+  if ( ! Tape.contains(tape, Block.fromString('END')) ) {
+    // Broken... learn more about immutablejs pls
+    tape = tape.update('blocks', function (blocks) {
+      return blocks.push(Block.fromString('END'))
     });
   }
 
   return tape;
 }
 
-Tape.fromString = function (original_code) { 
-  var tape = Parser.parse(original_code);
+Tape.fromString = function (original) { 
+  var parsed = Parser.parse(original);
 
-  return Tape.create(tape);
+  return Tape.create(parsed);
 }
 
 Tape.beginning = function(tape) {
-  return __createOffset(tape, 0)
+  return __createOffsetLocation(tape, 0)
 }
 
 Tape.next = function(location, n) {
@@ -82,39 +85,62 @@ Tape.next = function(location, n) {
 
   var index = __getLocationIndex(location) + n;
 
-  if ( ! Tape.inBounds(index)) {
-    return; // Need better badstate handling
-  }
-
-  return __createOffset(location.tape, index);
+  return __createOffsetLocation(location.get('tape'), index);
 }
 
 Tape.previous = function(location) {
   return Tape.next(location, -1)
 }
 
-Tape.inBounds = function(location) {
-  var x = __locationToInternalIndex(location);
+Tape.getLocationFromHandleOrOffset = function(tape, handleOrOffset, anchor) {
+  return typeof handleOrOffset == 'number'
+    ? Tape.next(anchor, handleOrOffset)
+    : __createHandleLocation(tape, handleOrOffset)
+}
 
-  return x >= 0 && x < location.tape.get('blocks').size;
+Tape.inBounds = function(location) {
+  var x = __getLocationIndex(location);
+
+  return x >= 0 && x < location.getIn(['tape', 'blocks']).size;
 };
 
 Tape.contains = function(tape, block) {
-  return tape.get('blocks').filter(function (d) { 
+  return tape.get('blocks').filter(function (d) {
     return Block.matches(block, d)
-  }).length > 0;
+  }).size > 0;
 }
 
 Tape.getBlock = function(location) {
   var index = __getLocationIndex(location);
 
-  return location.tape.getIn(['blocks', index]);
+  return location.get('tape').getIn(['blocks', index]);
+}
+
+Tape.getBlocks = function(location, counter) {
+  var index = __getLocationIndex(location);
+
+  if (counter < 0) {
+    counter = counter * -1;
+    index = index - counter;
+  }
+
+  return location.getIn(['tape', 'blocks']).slice(index, index + counter);
 }
 
 Tape.setBlock = function(location, block) {
   var index = __getLocationIndex(location);
 
-  return location.tape.setIn(['blocks', index], block);
+  return location.get('tape').setIn(['blocks', index], block);
+}
+
+Tape.setBlocks = function(location, blocks) {
+  for (var i = 0; i < blocks.length; i++) {
+    var tape = Tape.setBlock(location, blocks[i]);
+    location = Tape.next(location);
+    location = location.set('tape', tape)
+  }
+
+  return tape;
 }
 
 Tape.toString = function(tape) {

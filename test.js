@@ -11,6 +11,7 @@ var Bacon = require('baconjs'),
     Universe = require('./Universe.js'),
     config = require('./config.js'),
     util = require('./util.js'),
+    Tape = require('./Tape.js'),
     BaconUniverse = require('./BaconUniverse.js');
 
 var tests = {
@@ -19,10 +20,10 @@ var tests = {
   '3 2 + _ END': '3 2 + 5 END',
   '3 2 - _ END': '3 2 - 1 END',
   '3 2 * _ END': '3 2 * 6 END',
-  '3 2 / _ END': '3 2 / 1.5 END',
-  '3 2 > _ END': '3 2 > true END',
-  '3 2 < _ END': '3 2 < false END',
-  'true 5 4 ? _ END': 'true 5 4 ? 5 END',
+  '4 2 / _ END': '4 2 / 2 END',
+  '3 2 > _ END': '3 2 > "Greater Than" END',
+  '3 2 < _ END': '3 2 < !"Not Less Than" END',
+  '"true" 5 4 ? _ END': '"true" 5 4 ? 5 END',
 
   // Any kind of whitespace will do
   '3 2 +        _ END': '3 2 +        5 END',
@@ -33,22 +34,18 @@ var tests = {
     '0 1 + 1 1 + 2 1 + 3 1 + 4 1 + 5 1 + 6 END',
 
   '3 4 + _ 5 > _ bigger smaller ? _ END':
-    '3 4 + 7 5 > true bigger smaller ? bigger END',
+    '3 4 + 7 5 > "Greater Than" bigger smaller ? bigger END',
 
   // Fibs
-  '0 1 + _ . , . _ . -1 0 copy -3 -1 copy 0 1 + _ 20 > _ 5 0 ? _ slide -18 -15 copy 0 jump END':
-    '10946 17711 + 17711 . , . _ . -1 0 copy -3 -1 copy 20 1 + 21 20 > true 5 0 ? 5 slide -18 -15 copy 0 jump END',
+  '0#A 1#B + _#C . "," . _ . @B @A move @C @B move 0#I 1 + _#J 20 > _ 6 0 ? _ jump @J @I move @A jump END':
+    '10946#A 17711#B + 17711#C . "," . _ . @B @A move @C @B move 20#I 1 + 21#J 20 > "Greater Than" 6 0 ? 6 jump @J @I move @A jump END',
 
   // While loop
-  '0 1 + _ 5 > _ 5 0 ? _ slide -3 0 copy 0 jump END':
-    '5 1 + 6 5 > true 5 0 ? 5 slide -3 0 copy 0 jump END',
+  '0#A 1 + _#B 5 > _ 6 0 ? _ jump @B @A move @A jump END':
+    '5#A 1 + 6#B 5 > "Greater Than" 6 0 ? 6 jump @B @A move @A jump END',
 
   // Names
   '4#A A get _ END': '4#A A get 4 END',
-
-  // Fibs with names... lots of philosophical problems when you introduce names...
-  '0#A 1#B + _#C C . , . _ . B A move C B move 0#I 1 + _#J 20 > _ 5 0 ? _ slide J I move 0 jump END':
-    '10946#A 17711#B + 17711#C C . , . _ . B A move C B move 20#I 1 + 21#J 20 > true 5 0 ? 5 slide J I move 0 jump END',
 
   // Composed Folds parse
   "[ 3 3 [ 4 4 ] 3 ] END": "[ 3 3 [ 4 4 ] 3 ] END"
@@ -57,12 +54,14 @@ var tests = {
 Bacon.fromArray(_.keys(tests))
   .map(Universe.fromString)
   .flatMapLatest(function (universe) {
-    return BaconUniverse.asStream(universe)
+    return BaconUniverse.asBlockingStream(universe)
   })
   .filter(function (u1) { return ! u1.alive })
+  .filter(function (u1) { return  !(u1[0] && u1[0] == '<no-more>'); })
+  .bufferingThrottle(60)
   .onValue(function (u1) {
-    var actual_output = u1.tape.toString();
-    var original_input = u1.__original.tape.toString();
+    var actual_output = Tape.toString(u1.tape);
+    var original_input = Tape.toString(u1.history[0]);
     var expected_output = tests[original_input];
     var str = 
       '\n' +

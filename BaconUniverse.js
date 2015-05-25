@@ -8,6 +8,8 @@ exports.asStream = function(universe) {
     function stepSink() { 
       if (universe.alive) {
         sink(universe = universe.step())
+      } else {
+        sink(Bacon.noMore)
       }
     }
 
@@ -17,4 +19,19 @@ exports.asStream = function(universe) {
   });
 
 }
+
+exports.asBlockingStream = function(universe) {
+  return Bacon.fromBinder(function(sink) {
+    
+    sink(universe);
+
+    while (universe.alive) {
+      sink(universe = universe.step())
+    }
+
+    return function() {};
+  });
+
+}
+
 

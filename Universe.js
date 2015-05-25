@@ -2,7 +2,8 @@ var _ = require('lodash'),
     assert = require('assert'),
     config = require('./config.js'),
     util = require('./util.js'),
-    Tape = require('./Tape.js')
+    Tape = require('./Tape.js'),
+    Block = require('./Block.js'),
     ConsoleUtilities = require('./ConsoleUtilities.js');
 
 function Universe() {}
@@ -20,6 +21,8 @@ Universe.create = function (tape) {
   u.log = [];
 
   u.history = [];
+
+  this.alive = true;
 
   return u;
 }
@@ -39,6 +42,11 @@ Universe.prototype.stepsTaken = 0;
 Universe.prototype.step = function () {
   var steps = this.stepsTaken++;
 
+  if ( ! this.alive ) {
+    util.log("Can't step further, I'm done!")
+    return this;
+  }
+
   this.record();
 
   var daemon = this.daemon;
@@ -55,23 +63,36 @@ Universe.prototype.step = function () {
       util.log(daemon)
     }
 
-    copy.alive = false;
-    return copy;
+    this.alive = false;
+    return this;
   };
   
   // Get code at location
-  // TODO: Daemon must be an internal address, so get will not do.
   var block = Tape.getBlock(daemon);
 
   var blockInfo = Block.getInfo(block);
 
-  var inputs = Tape.getBlocks(daemon, blockInfo.inputs * -1)
-                  .map(Block.getValue);
+  if (typeof blockInfo == 'function') blockInfo = blockInfo({
+    location: daemon
+  });
+
+  if ( ! blockInfo ) {
+    util.log('Couldn\'t execute block ' + Block.toString(block))
+
+    this.alive = false;
+    return this;
+  }
+
+  var inputs = blockInfo.inputs == 0
+                ? []
+                : Tape.getBlocks(daemon, blockInfo.inputs * -1)
+                    .map(Block.getValue);
 
   var sideEffects = this.sideEffects();
+  var accessors = this.accessors();
 
   if (blockInfo.sideEffects) {
-    blockInfo.op(inputs, _.extend(sideEffects, accessors);
+    blockInfo.op(inputs, _.extend(sideEffects, accessors));
   } else {
     // Reduce privilege to only output
     blockInfo.op(inputs, _.extend({
@@ -79,7 +100,12 @@ Universe.prototype.step = function () {
     }, accessors))
   }
 
-  daemon = Tape.next(daemon);
+  // If the daemon's been moved already, then don't move it
+  this.daemon = this.daemon == daemon
+                ? Tape.next(this.daemon)
+                : this.daemon;
+
+  this.daemon = this.daemon.set('tape', this.tape);
 
   return this;
 }
@@ -91,20 +117,35 @@ Universe.prototype.sideEffects = function () {
     end: function () {
       self.alive = false;
     }, 
-    jump: function (handleOrOffset) {
-      self.daemon = Tape.handleOrOffset(self.daemon, handleOrOffset);
+    jump: function (location) {
+      self.daemon = location;
     },
     writeFromTo: function (source, destination) { 
-      self.tape = Tape.set(destination, Tape.get(source))
+      self.tape = Tape.setBlock(destination, Tape.getBlock(source))
     },
     output: function (output) {
-      self.tape = Tape.spliceArray(Tape.next(self.daemon), output.length, output)
+      if (! output.length ) output = [output]
+
+      self.tape = Tape.setBlocks(Tape.next(self.daemon), output)
     },
     println: function (input) {
       self.println(input.toString())
     },
     print: function (input) {
       self.print(input.toString())
+    }
+  }
+}
+
+Universe.prototype.accessors = function () {
+  var self = this;
+
+  return {
+    handleOrOffsetLocation: function (handleOrOffset) {
+      return Tape.getLocationFromHandleOrOffset(self.tape, handleOrOffset, self.daemon);
+    },
+    valueAtLocation: function (location) { 
+      return Tape.getBlock(location);
     },
   }
 }
