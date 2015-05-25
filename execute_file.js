@@ -16,8 +16,13 @@ fs.readFile(FILE_NAME, 'utf8', function (err,data) {
 
 
 
-  BaconUniverse.asStream(Universe.fromString(data))
-    .bufferingThrottle(INTERVAL)
+  var stream = BaconUniverse.asStream(Universe.fromString(data))
+    .bufferingThrottle(INTERVAL);
+
+  stream.filter(function (d) { return !(d[0] && d[0] == '<no-more>'); })
     .onValue(ConsoleUtilities.printUniverse)
+
+  stream.filter(function (d) { return (d[0] && d[0] == '<no-more>'); })
+    .onValue(function () { return process.exit(); })
 });
 

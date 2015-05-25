@@ -32,6 +32,8 @@ function printUniverse(universe) {
 
     var block = Tape.getBlock(loc);
 
+    if(! block || block == '' || ! block.get('code')) debugger; /* TESTING - Delete me */
+
     if (block == daemonBlock) {
       daemonIndex = index
     }
@@ -45,6 +47,11 @@ function printUniverse(universe) {
     sum += info.length + 1 + info.nameLength;
 
     loc = Tape.next(loc)
+  }
+
+  if (! Tape.inBounds(universe.daemon) ) {
+    w('Daemon outside boundaries!')
+    return;
   }
 
   var daemonWord = word_beginning_indicis[daemonIndex];

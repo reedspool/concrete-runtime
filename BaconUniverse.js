@@ -3,11 +3,12 @@ var Bacon = require('baconjs')
 exports.asStream = function(universe) {
   return Bacon.fromBinder(function(sink) {
     
-    sink(universe);
+    sink(universe.copy());
 
     function stepSink() { 
       if (universe.alive) {
-        sink(universe = universe.step())
+        universe = universe.step()
+        sink(universe.copy())
       } else {
         sink(Bacon.noMore)
       }
@@ -23,11 +24,14 @@ exports.asStream = function(universe) {
 exports.asBlockingStream = function(universe) {
   return Bacon.fromBinder(function(sink) {
     
-    sink(universe);
+    sink(universe.copy());
 
     while (universe.alive) {
-      sink(universe = universe.step())
+      universe = universe.step()
+      sink(universe.copy())
     }
+
+    sink(Bacon.noMore)
 
     return function() {};
   });

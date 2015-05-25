@@ -4,6 +4,7 @@ var _ = require('lodash'),
     util = require('./util.js'),
     Tape = require('./Tape.js'),
     Block = require('./Block.js'),
+    Immutable = require('immutable'),
     ConsoleUtilities = require('./ConsoleUtilities.js');
 
 function Universe() {}
@@ -70,10 +71,18 @@ Universe.prototype.step = function () {
   // Get code at location
   var block = Tape.getBlock(daemon);
 
+  if ( ! block || ! block.get('code') )  {
+    util.log('Error reading tape: ' + Block.toString(block))
+    util.log(Tape.toString(this.tape))
+
+    this.alive = false;
+    return this;
+  }
+
   var blockInfo = Block.getInfo(block);
 
   if (typeof blockInfo == 'function') blockInfo = blockInfo({
-    location: daemon
+    left: Tape.getBlocks(Tape.beginning(this.tape), daemon.get('offset'))
   });
 
   if ( ! blockInfo ) {
@@ -84,7 +93,7 @@ Universe.prototype.step = function () {
   }
 
   var inputs = blockInfo.inputs == 0
-                ? []
+                ? Immutable.List()
                 : Tape.getBlocks(daemon, blockInfo.inputs * -1)
                     .map(Block.getValue);
 
@@ -124,9 +133,7 @@ Universe.prototype.sideEffects = function () {
       self.tape = Tape.setBlock(destination, Tape.getBlock(source))
     },
     output: function (output) {
-      if (! output.length ) output = [output]
-
-      self.tape = Tape.setBlocks(Tape.next(self.daemon), output)
+      self.tape = Tape.setBlocks(Tape.next(self.daemon), Immutable.List(output))
     },
     println: function (input) {
       self.println(input.toString())
@@ -147,11 +154,43 @@ Universe.prototype.accessors = function () {
     valueAtLocation: function (location) { 
       return Tape.getBlock(location);
     },
+    callFold: function (fold, input, numOutputs) {
+      if(true) debugger; /* TESTING - Delete me */
+      var tape = Tape.create(fold.getIn(['code', 'tape']).toJS())
+      var location = Tape.beginning(tape);
+
+      // Replace blanks with inputs
+      tape = Tape.setBlocks(location, input);
+
+      var universe = Universe.create(tape);
+
+      while (universe.alive) { universe.step() }
+
+      // Rewind once from death,
+      location = Tape.previous(universe.daemon);
+      // // Twice from inserted 'END'
+      // location = Tape.previous(location);
+
+      var output = Tape.getBlocks(location, numOutputs * -1)
+
+      return output;
+    }
   }
 }
 
 Universe.prototype.record = function () {
   this.history.push(this.tape);
+}
+
+Universe.prototype.copy = function () {
+  var cpy = Universe.create(this.tape);
+
+  cpy.daemon = this.daemon.set('tape', cpy.tape)
+  cpy.stepsTaken = this.stepsTaken;
+  cpy.history = this.history.slice();
+  cpy.alive = this.alive;
+
+  return cpy;
 }
 
 Universe.prototype.println = function (input) {

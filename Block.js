@@ -14,6 +14,33 @@ function Code() {};
 
 var __proto = new Code();
 
+function __inputCount(fold) {
+  var blocks = fold.getIn(['code', 'tape', 'blocks']);
+  var i = 0;
+  var length = blocks.size;
+
+  while (Block.matches(blocks.get(i), Block.fromString('_')) 
+          && i < length) {
+    i++
+  }
+
+  return i;
+}
+
+function __outputCount(fold) {
+  var blocks = fold.getIn(['code', 'tape', 'blocks']);
+  var i = blocks.size - 1;
+  var count = 0;
+
+  while (Block.matches(blocks.get(i), Block.fromString('_')) 
+          && i >= 0) {
+    i--;
+    count++;
+  }
+
+  return count;
+}
+
 Block.fromString = function(original) {
   var tape = Parser.parse(original);
 
@@ -75,7 +102,7 @@ Block.getValue = function(block) {
       value = Number(code.get('value'))
       break;
     case "operator":
-      throw new Error('Operator' + code.get('op') + 'can\'t be evaluated')
+      false
       break;
     case "address":
       value = code.get('value')
@@ -92,7 +119,7 @@ Block.getValue = function(block) {
 }
 
 Block.matches = function(a, b) {
-  return Block.toString(a) == Block.toString(b)
+  return Block.getValue(a) == Block.getValue(b)
 }
 
 Block.getInfo = function (block) {
@@ -141,28 +168,28 @@ function __getCodeInfo(opcode) {
       inputs: 2,
       out: 1,
       op: function (inputs, sides) { 
-          sides.output([parseInt(inputs.get(0), 10) + parseInt(inputs.get(1), 10)].map(Block.fromNumber))
+          sides.output(Immutable.List([parseInt(inputs.get(0), 10) + parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
         }
     },
     '-': {
       inputs: 2,
       out: 1,
       op: function (inputs, sides) { 
-          sides.output([parseInt(inputs.get(0), 10) - parseInt(inputs.get(1), 10)].map(Block.fromNumber))
+          sides.output(Immutable.List([parseInt(inputs.get(0), 10) - parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
         }
     },
     '*': {
       inputs: 2,
       out: 1,
       op: function (inputs, sides) { 
-          sides.output([parseInt(inputs.get(0), 10) * parseInt(inputs.get(1), 10)].map(Block.fromNumber))
+          sides.output(Immutable.List([parseInt(inputs.get(0), 10) * parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
         }
     },
     '/': {
       inputs: 2,
       out: 1,
       op: function (inputs, sides) { 
-          sides.output([parseInt(inputs.get(0), 10) / parseInt(inputs.get(1), 10)].map(Block.fromNumber))
+          sides.output(Immutable.List([parseInt(inputs.get(0), 10) / parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
         }
     },
     '>': {
@@ -171,7 +198,7 @@ function __getCodeInfo(opcode) {
       op: function (inputs, sides) { 
           var result = parseInt(inputs.get(0), 10) > parseInt(inputs.get(1), 10);
 
-          sides.output([(result ? '"Greater Than"' : '!"Not Greater Than"') ].map(Block.fromString))
+          sides.output(Immutable.List([(result ? '"Greater Than"' : '!"Not Greater Than"') ].map(Block.fromString)))
         }
     },
     '<': {
@@ -180,7 +207,7 @@ function __getCodeInfo(opcode) {
       op: function (inputs, sides) { 
           var result = parseInt(inputs.get(0), 10) < parseInt(inputs.get(1), 10);
 
-          sides.output([(result ? '"Less Than"' : '!"Not Less Than"') ].map(Block.fromString))
+          sides.output(Immutable.List([(result ? '"Less Than"' : '!"Not Less Than"') ].map(Block.fromString)))
         }
     },
     '?': {
@@ -191,20 +218,97 @@ function __getCodeInfo(opcode) {
           var yes = inputs.get(1);
           var no = inputs.get(2);
 
-          sides.output([ '' + (predicate ? yes : no) ].map(Block.fromString))
+          sides.output(Immutable.List([ '' + (predicate ? yes : no) ].map(Block.fromString)))
         }
     },
-    'call': {
+    'call': function (environment) {
+      var fold = environment.left.last();
+
+      return {
+        inputs: __inputCount(fold) + 1,
+        out: __outputCount(fold),
+        op: function (inputs, sides) { 
+            // Chop off the actual fold;
+            inputs = inputs.pop();
+
+            // Turn them back into blocks
+            inputs = inputs.map(function (a) { return a + ''; }).map(Block.fromString);
+
+            // Call it
+            var output = sides.callFold(fold, inputs, __outputCount(fold))
+
+            sides.output(output)
+          }
+      }
+    },
+    'times': function (environment) {
+      var fold = environment.left.get(environment.left.size - 2);
+
+      return {
+        inputs: __inputCount(fold) + 1 + 1,
+        out: __outputCount(fold),
+        op: function (inputs, sides) {
+            // Get the number, and remove it
+            var num = inputs.last();
+            inputs = inputs.pop();
+
+            // Chop off the actual fold;
+            inputs = inputs.pop();
+
+            // Call it
+            while (num > 0) {
+              var output = sides.callFold(fold, inputs, __outputCount(fold))
+              num--;
+            }
+
+            sides.output(output)
+          }
+      }
+    },
+    'reduce': function (environment) {
+      var fold = environment.left.get(environment.left.size - 2);
+
+      return {
         inputs: 3,
         out: 1,
-        op: function (inputs, sides) { 
-            var predicate = util.parseBoolean(inputs.get(0))
-            var yes = inputs.get(1);
-            var no = inputs.get(2);
+        op: function (inputs, sides) {
+          if(true) debugger; /* TESTING - Delete me */
+            // Get the initial, and remove it
+            var initial = inputs.last();
+            var next;
+            var memo;
 
-            sides.output([ '' + (predicate ? yes : no) ].map(Block.fromString))
+            inputs = inputs.pop();
+
+            // Chop off the actual fold;
+            inputs = inputs.pop();
+
+            // Get the list to act on
+            var list = inputs.get(0)
+
+            // set actual inputs
+
+            // Call it
+            var length = list.size;
+            var i = 0;
+            while (i < length) {
+
+              next = list.get(i)
+              memo = output
+                ? output.get(0) 
+                : Block.fromString(initial + '')
+              inputs = Immutable.List([next, memo])
+
+              var output = sides.callFold(fold, inputs, __outputCount(fold))
+
+              // Reset inputs 
+              i++;
+            }
+
+            sides.output(output)
           }
-      },
+      }
+    },
     'jump': {
       inputs: 1,
       out: 0,

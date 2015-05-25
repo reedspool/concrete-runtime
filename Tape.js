@@ -134,13 +134,16 @@ Tape.setBlock = function(location, block) {
 }
 
 Tape.setBlocks = function(location, blocks) {
-  for (var i = 0; i < blocks.length; i++) {
-    var tape = Tape.setBlock(location, blocks[i]);
+  var tape;
+  var len = blocks.size
+
+  for (var i = 0; i < len; i++) {
+    tape = Tape.setBlock(location, blocks.get(i));
     location = Tape.next(location);
     location = location.set('tape', tape)
   }
 
-  return tape;
+  return tape || location.get('tape');
 }
 
 Tape.toString = function(tape) {
