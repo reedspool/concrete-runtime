@@ -1,6 +1,11 @@
 'use strict';
 // generated on 2015-05-27 using generator-gulp-webapp 0.1.0
 
+var gulp = require("gulp");
+var gutil = require("gulp-util");
+var webpack = require("webpack");
+var WebpackDevServer = require("webpack-dev-server");
+
 var gulp = require('gulp');
 
 // load plugins
@@ -19,12 +24,18 @@ gulp.task('styles', function () {
 
 gulp.task('scripts', function () {
     return gulp.src('app/scripts/**/*.js')
-        .pipe($.jshint())
-        .pipe($.jshint.reporter(require('jshint-stylish')))
         .pipe($.size());
 });
 
-gulp.task('html', ['styles', 'scripts'], function () {
+// Copy directly the core files for right now
+// 
+// FUTURE: use a bower/npm module instead
+gulp.task('core', function () {
+    return gulp.src('/Users/reed/pop/pretzel_games/programming_game/core/**/*.js', { dot: true })
+        .pipe(gulp.dest('app/scripts/core'));
+});
+
+gulp.task('html', ['styles', 'scripts', 'core'], function () {
     var jsFilter = $.filter('**/*.js');
     var cssFilter = $.filter('**/*.css');
 
@@ -91,7 +102,7 @@ gulp.task('connect', function () {
         });
 });
 
-gulp.task('serve', ['connect', 'styles'], function () {
+gulp.task('serve', ['connect', 'styles', 'core'], function () {
     require('opn')('http://localhost:9000');
 });
 
@@ -113,7 +124,7 @@ gulp.task('wiredep', function () {
         .pipe(gulp.dest('app'));
 });
 
-gulp.task('watch', ['connect', 'serve'], function () {
+gulp.task('watch', ['connect', 'serve', 'core'], function () {
     var server = $.livereload();
 
     // watch for changes
