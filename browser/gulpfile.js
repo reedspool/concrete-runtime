@@ -5,21 +5,24 @@ var gulp = require("gulp");
 var gutil = require("gulp-util");
 var WebpackDevServer = require("webpack-dev-server");
 
+var webpack = require('gulp-webpack');
 var path = require('path'),
-    webpack = require('gulp-webpack-build');
+    webpackBuild = require('gulp-webpack-build');
 
-var src = './src',
-    dest = './dist',
-    webpackOptions = {
+var webpackOptions = {
         debug: true,
         devtool: '#source-map',
         watchDelay: 200
     },
     webpackConfig = {
-        useMemoryFs: true,
-        progress: true
+        context: __dirname + "/app",
+        entry: "./entry",
+        output: {
+            path: __dirname + "/dist",
+            filename: "bundle.js"
+        }
     },
-    CONFIG_FILENAME = webpack.config.CONFIG_FILENAME;
+    CONFIG_FILENAME = webpackBuild.config.CONFIG_FILENAME;
 
 // load plugins
 var $ = require('gulp-load-plugins')();
@@ -158,32 +161,33 @@ gulp.task('watch', ['connect', 'serve', 'core'], function () {
 });
 
 gulp.task('webpack', [], function() {
-    return gulp.src(path.join(src, '**', CONFIG_FILENAME), { base: path.resolve(src) })
-        .pipe(webpack.init(webpackConfig))
-        .pipe(webpack.props(webpackOptions))
-        .pipe(webpack.run())
-        .pipe(webpack.format({
+    return gulp.src(path.join('app/scripts', '**', CONFIG_FILENAME),
+        { base: path.resolve('app/scripts') })
+        .pipe(webpackBuild.init(webpackConfig))
+        .pipe(webpackBuild.props(webpackOptions))
+        .pipe(webpackBuild.run())
+        .pipe(webpackBuild.format({
             version: false,
             timings: true
         }))
-        .pipe(webpack.failAfter({
+        .pipe(webpackBuild.failAfter({
             errors: true,
             warnings: true
         }))
-        .pipe(gulp.dest(dest));
+        .pipe(gulp.dest('dist/webpacked/'));
 });
 
 // gulp.task('watch', function() {
 //     gulp.watch(path.join(src, '**/*.*')).on('change', function(event) {
 //         if (event.type === 'changed') {
 //             gulp.src(event.path, { base: path.resolve(src) })
-//                 .pipe(webpack.closest(CONFIG_FILENAME))
-//                 .pipe(webpack.init(webpackConfig))
-//                 .pipe(webpack.props(webpackOptions))
-//                 .pipe(webpack.watch(function(err, stats) {
+//                 .pipe(webpackBuild.closest(CONFIG_FILENAME))
+//                 .pipe(webpackBuild.init(webpackConfig))
+//                 .pipe(webpackBuild.props(webpackOptions))
+//                 .pipe(webpackBuild.watch(function(err, stats) {
 //                     gulp.src(this.path, { base: this.base })
-//                         .pipe(webpack.proxy(err, stats))
-//                         .pipe(webpack.format({
+//                         .pipe(webpackBuild.proxy(err, stats))
+//                         .pipe(webpackBuild.format({
 //                             verbose: true,
 //                             version: false
 //                         }))
@@ -195,9 +199,15 @@ gulp.task('webpack', [], function() {
 
 gulp.task("webpack-dev-server", function(callback) {
     // Start a webpack-dev-server
-    var compiler = webpack({
-        // configuration
-    });
+    var compiler = 
+        webpack({
+            context: __dirname + "/app",
+            entry: "./entry",
+            output: {
+                path: __dirname + "/dist",
+                filename: "bundle.js"
+            }
+        });
 
     new WebpackDevServer(compiler, {
         // server and middleware options

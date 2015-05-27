@@ -74,7 +74,6 @@ dance draw
 ### Next steps 
 * Separate logging timing of side effects/outputs from daemon movement
 * Make a block registry and factory
-* Make a package.json file with dependencies and description
 * Take out extraneous requires
 * Make a more rigorous typing system for Block
 * Use browserify or webpack to get this into the browser.
