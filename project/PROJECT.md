@@ -16,7 +16,6 @@
 8. Motion - Use animation and motion to suggest the flow of data and order of operations within the machine.
 9. Haters Gonna Hate - Concerned with making a powerful programming language, but not with time or memory efficiency, or code elegance, except when those interfere with playability.
 
-
 ## Implemented Operators
 + - * / 
 0 1 2 3 ... "Hello World!" 
@@ -70,21 +69,3 @@ dance draw
 
 // Reduce with names
 [ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _#A @A get _ ] 1 reduce 42
-
-### Next steps 
-* Separate logging timing of side effects/outputs from daemon movement
-* Make a block registry and factory
-* Take out extraneous requires
-* Make a more rigorous typing system for Block
-* Use browserify or webpack to get this into the browser.
-* Make a web browser view and editor
-* Use a real unit testing framework
-* Make a trello board for this, post it in README
-* Make more demos
-* Ask for code design help
-* Complete implementing immutables!!! immutable universes!!!!
-* Make or commission a graphic design
-* License
-
-### Future
-* More variety of side effects
