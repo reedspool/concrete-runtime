@@ -4,9 +4,7 @@ var _ = require('lodash'),
     util = require('./util.js'),
     Tape = require('./Tape.js'),
     Block = require('./Block.js'),
-    Immutable = require('immutable'),
-    ConsoleUtilities = require('./ConsoleUtilities.js');
-
+    Immutable = require('immutable');
 function Universe() {}
 module.exports = Universe
 var __proto = new Universe();
@@ -155,7 +153,6 @@ Universe.prototype.accessors = function () {
       return Tape.getBlock(location);
     },
     callFold: function (fold, input, numOutputs) {
-      if(true) debugger; /* TESTING - Delete me */
       var tape = Tape.create(fold.getIn(['code', 'tape']).toJS())
       var location = Tape.beginning(tape);
 

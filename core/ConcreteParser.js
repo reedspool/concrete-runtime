@@ -106,7 +106,7 @@ module.exports = (function() {
         peg$c30 = function(value) {
             return {
               type: "address",
-              value: value[0]
+              value: value
             }
           },
         peg$c31 = "@@",

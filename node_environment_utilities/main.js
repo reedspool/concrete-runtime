@@ -1,7 +1,4 @@
-var Bacon = require('baconjs'),
-    Universe = require('../core/Universe.js'),
-    config = require('../core/config.js'),
-    util = require('../core/util.js'),
+var Universe = require('../core/Universe.js'),
     BaconUniverse = require('../core/BaconUniverse.js'),
     ConsoleUtilities = require('./ConsoleUtilities.js');
 

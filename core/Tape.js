@@ -13,7 +13,6 @@ var __proto = new Tape();
 function Tape() {}
 
 function __isHandle(location) {
-  if(!location) debugger; /* TESTING - Delete me */
   return location.get('type') == 'handle'
 }
 

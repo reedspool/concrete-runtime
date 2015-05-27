@@ -129,7 +129,7 @@ Address
   = "@" value:Identifier {
     return {
       type: "address",
-      value: value[0]
+      value: value
     }
   }
 

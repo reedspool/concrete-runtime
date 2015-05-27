@@ -4,15 +4,9 @@ var _ = require('lodash'),
     Immutable = require('immutable'),
     Parser = require('./ConcreteParser.js');
 
-function Block() {}
-
 module.exports = Block
 
-var __proto = new Block();
-
-function Code() {};
-
-var __proto = new Code();
+function Block() {}
 
 function __inputCount(fold) {
   var blocks = fold.getIn(['code', 'tape', 'blocks']);
@@ -47,23 +41,21 @@ Block.fromString = function(original) {
   return Immutable.fromJS(tape.blocks[0]);
 }
 
+// Cheating
 Block.fromNumber = function(original) { return Block.fromString('' + original) }
 Block.fromBoolean = function(original) { return Block.fromString('' + original) }
 
 Block.toString = function(block) {
   var str;
-  var code = block.get('code');
+  var code = block.get('code')
 
-  if ( ! code.get || ! code.get('type') ) {
-    // Literal
-    return code;
-  }
-
-  switch(code.get('type')) {
+  switch(Block.getType(block)) {
+    case "literal":
+      str = code;
+      break;
     case "fold": 
-      str = "[ " + code.getIn(['tape', 'blocks'])
-            .map(Block.toString)
-            .join(' ') + " ]"
+    if(true) debugger; /* TESTING - Delete me */
+      str = "[" + code.get('tape').get('original') + "]"
       break;
     case "number": 
       str = code.get('value')
@@ -85,16 +77,24 @@ Block.toString = function(block) {
   return str + '';
 }
 
+Block.getType = function (block) {
+  var code = block.get('code')
+
+  return typeof code == 'string'
+        ? 'literal'
+        : code.get('type')
+
+}
+
 Block.getValue = function(block) {
   var value;
-  var code = block.get('code');
 
-  if ( ! code.get || ! code.get('type') ) {
-    // Literal
-    return code;
-  }
+  var code = block.get('code')
 
-  switch(code.get('type')) {
+  switch(Block.getType(block)) {
+    case "literal":
+      value = code;
+      break;
     case "fold": 
       value = code.getIn(['tape', 'blocks'])
       break;
@@ -214,7 +214,7 @@ function __getCodeInfo(opcode) {
       inputs: 3,
       out: 1,
       op: function (inputs, sides) { 
-          var predicate = util.parseBoolean(inputs.get(0))
+          var predicate = inputs.get(0);
           var yes = inputs.get(1);
           var no = inputs.get(2);
 
@@ -272,7 +272,6 @@ function __getCodeInfo(opcode) {
         inputs: 3,
         out: 1,
         op: function (inputs, sides) {
-          if(true) debugger; /* TESTING - Delete me */
             // Get the initial, and remove it
             var initial = inputs.last();
             var next;

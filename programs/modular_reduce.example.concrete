@@ -1,0 +1,11 @@
+[ _ _ * _ ]#Product
+[ _ _ + _ ]#Sum
+[ 1 1 1 1 1 1 2 3 7 ]#In
+
+// Use product for our Method
+@Sum @Method move
+
+// Load In our input
+@In @List move
+
+_#List _#Method 1 reduce _ END
