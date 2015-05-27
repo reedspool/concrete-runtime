@@ -3,10 +3,23 @@
 
 var gulp = require("gulp");
 var gutil = require("gulp-util");
-var webpack = require("webpack");
 var WebpackDevServer = require("webpack-dev-server");
 
-var gulp = require('gulp');
+var path = require('path'),
+    webpack = require('gulp-webpack-build');
+
+var src = './src',
+    dest = './dist',
+    webpackOptions = {
+        debug: true,
+        devtool: '#source-map',
+        watchDelay: 200
+    },
+    webpackConfig = {
+        useMemoryFs: true,
+        progress: true
+    },
+    CONFIG_FILENAME = webpack.config.CONFIG_FILENAME;
 
 // load plugins
 var $ = require('gulp-load-plugins')();
@@ -142,4 +155,58 @@ gulp.task('watch', ['connect', 'serve', 'core'], function () {
     gulp.watch('app/scripts/**/*.js', ['scripts']);
     gulp.watch('app/images/**/*', ['images']);
     gulp.watch('bower.json', ['wiredep']);
+});
+
+gulp.task('webpack', [], function() {
+    return gulp.src(path.join(src, '**', CONFIG_FILENAME), { base: path.resolve(src) })
+        .pipe(webpack.init(webpackConfig))
+        .pipe(webpack.props(webpackOptions))
+        .pipe(webpack.run())
+        .pipe(webpack.format({
+            version: false,
+            timings: true
+        }))
+        .pipe(webpack.failAfter({
+            errors: true,
+            warnings: true
+        }))
+        .pipe(gulp.dest(dest));
+});
+
+// gulp.task('watch', function() {
+//     gulp.watch(path.join(src, '**/*.*')).on('change', function(event) {
+//         if (event.type === 'changed') {
+//             gulp.src(event.path, { base: path.resolve(src) })
+//                 .pipe(webpack.closest(CONFIG_FILENAME))
+//                 .pipe(webpack.init(webpackConfig))
+//                 .pipe(webpack.props(webpackOptions))
+//                 .pipe(webpack.watch(function(err, stats) {
+//                     gulp.src(this.path, { base: this.base })
+//                         .pipe(webpack.proxy(err, stats))
+//                         .pipe(webpack.format({
+//                             verbose: true,
+//                             version: false
+//                         }))
+//                         .pipe(gulp.dest(dest));
+//                 }));
+//         }
+//     });
+// });
+
+gulp.task("webpack-dev-server", function(callback) {
+    // Start a webpack-dev-server
+    var compiler = webpack({
+        // configuration
+    });
+
+    new WebpackDevServer(compiler, {
+        // server and middleware options
+    }).listen(8080, "localhost", function(err) {
+        if(err) throw new gutil.PluginError("webpack-dev-server", err);
+        // Server listening
+        gutil.log("[webpack-dev-server]", "http://localhost:8080/webpack-dev-server/index.html");
+
+        // keep the server alive or continue?
+        // callback();
+    });
 });
