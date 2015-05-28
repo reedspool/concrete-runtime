@@ -2,7 +2,7 @@ module.exports = {
   context: "./app/scripts",
   entry: "./main",
   output: {
-      path: "./dist",
+      path: "./dist/scripts/bundle",
       filename: "bundle.js"
   }
 };

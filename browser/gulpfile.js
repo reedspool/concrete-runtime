@@ -28,8 +28,8 @@ gulp.task('core', function () {
 });
 
 gulp.task('html', ['styles', 'core', 'webpack-shell-production'], function () {
-    var jsFilter = $.filter('**/*.js');
-    var cssFilter = $.filter('**/*.css');
+    var jsFilter = $.filter('app/scripts/**/*.js');
+    var cssFilter = $.filter('app/styles/**/*.css');
 
     return gulp.src('app/*.html')
         .pipe($.useref.assets({searchPath: '{.tmp,app}'}))
@@ -73,7 +73,7 @@ gulp.task('clean', function () {
     return gulp.src(['.tmp', 'dist'], { read: false }).pipe($.clean());
 });
 
-gulp.task('build', ['html', 'images', 'fonts', 'scripts', 'extras']);
+gulp.task('build', ['html', 'images', 'fonts', 'extras']);
 
 gulp.task('default', ['clean'], function () {
     gulp.start('build');
