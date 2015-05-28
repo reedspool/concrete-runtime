@@ -21,11 +21,38 @@
         <!-- endbuild -->
     </head>
     <body>
-        
+        <div class="container-fluid">
+            <div class="col-xs-12">
+                <div class="row">
+                    <div class="container">
+                        <div class="col-xs-8 col-xs-offset-2">
+                            <div class="row">
+                                <h1>Mic Check</h1>
+                                <h3>Is this thing on?</h3>
+                        
+                                <form action="#">
+                                    <label for="Concrete-input">Input</label><br>
+                                    <textarea id="Concrete-input" name="" id="" cols="30" rows="10">1 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ </textarea><br>
+                        
+                                    <button>Run</button><br>
+                        
+                                    <label for="Concrete-output">Output</label><br>
+                                    <textarea id="Concrete-output" name="" id="" cols="30" rows="10">
+                                        
+                                    </textarea>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- build:js scripts/vendor.js -->
         <!-- bower:js -->
         <script src="bower_components/jquery/dist/jquery.js"></script>
         <script src="bower_components/bacon/dist/Bacon.js"></script>
+        <script src="bower_components/bacon.jquery/dist/bacon.jquery.js"></script>
         <!-- endbower -->
         <!-- endbuild -->
 
@@ -44,14 +71,8 @@
         <script src="bower_components/bootstrap-sass-official/vendor/assets/javascripts/bootstrap/tab.js"></script>
         <!-- endbuild -->
 
-        <!-- build:js scripts/core.js -->
-        <script src="scripts/core/Tape.js"></script>
-        <script src="scripts/core/Universe.js"></script>
-        <script src="scripts/core/BaconUniverse.js"></script>
-        <!-- endbuild -->
-
-        <!-- build:js scripts/main.js -->
-        <script src="scripts/main.js"></script>
+        <!-- build:js scripts/bundle.js -->
+        <script src="scripts/bundle/bundle.js"></script>
         <!-- endbuild -->
 </body>
 </html>

@@ -14,7 +14,7 @@ exports.asStream = function(universe) {
       }
     }
 
-    var interval = setInterval(stepSink, 60)
+    var interval = setInterval(stepSink, 0)
 
     return function() {};
   });

@@ -3,26 +3,7 @@
 
 var gulp = require("gulp");
 var gutil = require("gulp-util");
-var WebpackDevServer = require("webpack-dev-server");
-
-var webpack = require('gulp-webpack');
-var path = require('path'),
-    webpackBuild = require('gulp-webpack-build');
-
-var webpackOptions = {
-        debug: true,
-        devtool: '#source-map',
-        watchDelay: 200
-    },
-    webpackConfig = {
-        context: __dirname + "/app",
-        entry: "./entry",
-        output: {
-            path: __dirname + "/dist",
-            filename: "bundle.js"
-        }
-    },
-    CONFIG_FILENAME = webpackBuild.config.CONFIG_FILENAME;
+var shell = require('gulp-shell');
 
 // load plugins
 var $ = require('gulp-load-plugins')();
@@ -38,11 +19,6 @@ gulp.task('styles', function () {
         .pipe($.size());
 });
 
-gulp.task('scripts', function () {
-    return gulp.src('app/scripts/**/*.js')
-        .pipe($.size());
-});
-
 // Copy directly the core files for right now
 // 
 // FUTURE: use a bower/npm module instead
@@ -51,7 +27,7 @@ gulp.task('core', function () {
         .pipe(gulp.dest('app/scripts/core'));
 });
 
-gulp.task('html', ['styles', 'scripts', 'core'], function () {
+gulp.task('html', ['styles', 'core', 'webpack-shell-production'], function () {
     var jsFilter = $.filter('**/*.js');
     var cssFilter = $.filter('**/*.css');
 
@@ -97,7 +73,7 @@ gulp.task('clean', function () {
     return gulp.src(['.tmp', 'dist'], { read: false }).pipe($.clean());
 });
 
-gulp.task('build', ['html', 'images', 'fonts', 'extras']);
+gulp.task('build', ['html', 'images', 'fonts', 'scripts', 'extras']);
 
 gulp.task('default', ['clean'], function () {
     gulp.start('build');
@@ -118,7 +94,7 @@ gulp.task('connect', function () {
         });
 });
 
-gulp.task('serve', ['connect', 'styles', 'core'], function () {
+gulp.task('serve', ['connect', 'styles', 'core', 'webpack-shell-dev'], function () {
     require('opn')('http://localhost:9000');
 });
 
@@ -140,7 +116,7 @@ gulp.task('wiredep', function () {
         .pipe(gulp.dest('app'));
 });
 
-gulp.task('watch', ['connect', 'serve', 'core'], function () {
+gulp.task('watch', ['connect', 'serve'], function () {
     var server = $.livereload();
 
     // watch for changes
@@ -155,68 +131,15 @@ gulp.task('watch', ['connect', 'serve', 'core'], function () {
     });
 
     gulp.watch('app/styles/**/*.scss', ['styles']);
-    gulp.watch('app/scripts/**/*.js', ['scripts']);
+    gulp.watch(['app/scripts/**/*.js', '!app/scripts/bundle/**/*.js'], ['core', 'webpack-shell-dev']);
     gulp.watch('app/images/**/*', ['images']);
     gulp.watch('bower.json', ['wiredep']);
 });
 
-gulp.task('webpack', [], function() {
-    return gulp.src(path.join('app/scripts', '**', CONFIG_FILENAME),
-        { base: path.resolve('app/scripts') })
-        .pipe(webpackBuild.init(webpackConfig))
-        .pipe(webpackBuild.props(webpackOptions))
-        .pipe(webpackBuild.run())
-        .pipe(webpackBuild.format({
-            version: false,
-            timings: true
-        }))
-        .pipe(webpackBuild.failAfter({
-            errors: true,
-            warnings: true
-        }))
-        .pipe(gulp.dest('dist/webpacked/'));
-});
+gulp.task('webpack-shell-dev', shell.task([
+    'webpack -d --config ./webpack.config.dev.js'
+]))
 
-// gulp.task('watch', function() {
-//     gulp.watch(path.join(src, '**/*.*')).on('change', function(event) {
-//         if (event.type === 'changed') {
-//             gulp.src(event.path, { base: path.resolve(src) })
-//                 .pipe(webpackBuild.closest(CONFIG_FILENAME))
-//                 .pipe(webpackBuild.init(webpackConfig))
-//                 .pipe(webpackBuild.props(webpackOptions))
-//                 .pipe(webpackBuild.watch(function(err, stats) {
-//                     gulp.src(this.path, { base: this.base })
-//                         .pipe(webpackBuild.proxy(err, stats))
-//                         .pipe(webpackBuild.format({
-//                             verbose: true,
-//                             version: false
-//                         }))
-//                         .pipe(gulp.dest(dest));
-//                 }));
-//         }
-//     });
-// });
-
-gulp.task("webpack-dev-server", function(callback) {
-    // Start a webpack-dev-server
-    var compiler = 
-        webpack({
-            context: __dirname + "/app",
-            entry: "./entry",
-            output: {
-                path: __dirname + "/dist",
-                filename: "bundle.js"
-            }
-        });
-
-    new WebpackDevServer(compiler, {
-        // server and middleware options
-    }).listen(8080, "localhost", function(err) {
-        if(err) throw new gutil.PluginError("webpack-dev-server", err);
-        // Server listening
-        gutil.log("[webpack-dev-server]", "http://localhost:8080/webpack-dev-server/index.html");
-
-        // keep the server alive or continue?
-        // callback();
-    });
-});
+gulp.task('webpack-shell-production', shell.task([
+    'webpack -p'
+]))
