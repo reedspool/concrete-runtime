@@ -19,48 +19,47 @@ Concrete is a new programming language. Concrete's closest relatives are Factor,
 
 You can play with Concrete right now! Simply (if you know what you're doing, heh) clone this repository, and run `npm install && node node_environment_utilities/main.js` in your terminal. If this doesn't work for you, you'll have to wait for the browser version, now in development, to come out. That's real life.
 
+See also [Trello Board](https://trello.com/b/LjKsfBw4/concrete)
+
 ------------------------
 
 ## Example Programs
-// Basic ops and values
-3 2 + _
-3 2 - _
-3 2 * _
-4 2 / _
-3 2 > _
-3 2 < _
-"true" 5 4 ? _
+    // Basic ops and values
+    3 2 + _
+    3 2 - _
+    3 2 * _
+    4 2 / _
+    3 2 > _
+    3 2 < _
+    "true" 5 4 ? _
 
-  // Any kind of whitespace will do
-3 2 +        _
-3 2 +   \t\n     _
+      // Any kind of whitespace will do
+    3 2 +        _
+    3 2 +   \t\n     _
 
-  // Sequences of ops
-0 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _
-0 1 + 1 1 + 2 1 + 3 1 + 4 1 + 5 1 + 6
+      // Sequences of ops
+    0 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _
+    0 1 + 1 1 + 2 1 + 3 1 + 4 1 + 5 1 + 6
 
-3 4 + 7 5 > "Greater Than" bigger smaller ? bigger
+    3 4 + 7 5 > "Greater Than" bigger smaller ? bigger
 
-// Fibs
-'0#A 1#B + _#C . "," . _ . @B @A move @C @B move 0#I 1 + _#J 20 > _ 6 0 ? _ jump @J @I move @A jump
+    // Fibs
+    '0#A 1#B + _#C . "," . _ . @B @A move @C @B move 0#I 1 + _#J 20 > _ 6 0 ? _ jump @J @I move @A jump
 
-// While loop
-5#A 1 + 6#B 5 > "Greater Than" 6 0 ? 6 jump @B @A move @A jump
+    // While loop
+    5#A 1 + 6#B 5 > "Greater Than" 6 0 ? 6 jump @B @A move @A jump
 
-// Names
-'4#A A get _
+    // Names
+    '4#A A get _
 
-// Composed Folds
-[ 3 3 [ 4 4 ] 3 ]
+    // Composed Folds
+    [ 3 3 [ 4 4 ] 3 ]
 
-// Call
-2 3 [ _ _ * _ ] call _
+    // Call
+    2 3 [ _ _ * _ ] call _
 
-// Reduce
-[ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _ ] 1 reduce 42
+    // Reduce
+    [ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _ ] 1 reduce 42
 
-// Reduce with names
-[ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _#A @A get _ ] 1 reduce 42
-
-
-See [Trello Board](https://trello.com/b/LjKsfBw4/concrete)
+    // Reduce with names
+    [ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _#A @A get _ ] 1 reduce 42
