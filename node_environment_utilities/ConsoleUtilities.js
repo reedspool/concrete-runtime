@@ -3,13 +3,14 @@ var config = require('../core/config.js')
 var _ = require('lodash')
 var Tape = require('../core/Tape.js')
 var Block = require('../core/Block.js')
+var Immutable = require('immutable');
 
 function printUniverse(universe) {
-  if(!universe.daemon) debugger; /* TESTING - Delete me */
   var word_beginning_indicis = [];
   var tape = universe.tape;
   var daemonBlock = Tape.getBlock(universe.daemon);
   var daemonIndex;
+  if(true) debugger; /* TESTING - Delete me */
   var lilConsole = universe.log.join('\n')
   var w = util.log;
 
@@ -31,9 +32,7 @@ function printUniverse(universe) {
     index++;
 
     var block = Tape.getBlock(loc);
-
-    if(! block || block == '' || ! block.get('code')) debugger; /* TESTING - Delete me */
-
+    
     if (block == daemonBlock) {
       daemonIndex = index
     }

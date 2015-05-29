@@ -134,10 +134,10 @@ Universe.prototype.sideEffects = function () {
       self.tape = Tape.setBlocks(Tape.next(self.daemon), Immutable.List(output))
     },
     println: function (input) {
-      self.println(input.toString())
+      self.println(input)
     },
     print: function (input) {
-      self.print(input.toString())
+      self.print(input)
     }
   }
 }
@@ -186,7 +186,8 @@ Universe.prototype.copy = function () {
   cpy.stepsTaken = this.stepsTaken;
   cpy.history = this.history.slice();
   cpy.alive = this.alive;
-
+  cpy.log = this.log.slice();
+  
   return cpy;
 }
 

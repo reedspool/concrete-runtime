@@ -345,6 +345,7 @@ function __getCodeInfo(opcode) {
       out: 0,
       sideEffects: true,
       op: function (inputs, sides) { 
+        if(true) debugger; /* TESTING - Delete me */
         sides.print(inputs.get(0))
       }
     },
