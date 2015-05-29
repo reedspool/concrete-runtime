@@ -10,20 +10,21 @@ module.exports = Universe
 var __proto = new Universe();
 
 Universe.create = function (tape) {
-  var u = Object.create(__proto);
+  var u = Immutable.Map({})
 
-  u.tape = tape;
-
-  // For now, a daemon is just a location
-  u.daemon = Tape.beginning(u.tape);
-
-  u.log = [];
-
-  u.history = [];
-
-  this.alive = true;
+  u = u.set('tape', tape)
+  u = u.set('daemon', Tape.beginning(u.tape))
+  u = u.set('tape', tape)
+  u = u.set('log', [])
+  u = u.set('history', [])
+  u = u.set('alive', true)
+  u = u.set('stepsTaken', 0)
 
   return u;
+}
+
+Universe.die = function (universe) {
+  return universe.set('alive', false)
 }
 
 Universe.fromString = function (codez) {
@@ -36,19 +37,17 @@ Universe.fromString = function (codez) {
  * Step the universe exactly once.
  */
 
-Universe.prototype.stepsTaken = 0;
+Universe.step = function (universe) {
+  var steps = universe.get('stepsTaken')
 
-Universe.prototype.step = function () {
-  var steps = this.stepsTaken++;
-
-  if ( ! this.alive ) {
+  if ( ! universe.get('alive') )
     util.log("Can't step further, I'm done!")
-    return this;
+    return universe;
   }
 
-  this.record();
+  universe = Universe.record(universe);
 
-  var daemon = this.daemon;
+  var daemon = universe.get('daemon')
 
   if ( ! Tape.inBounds(daemon) ||
     steps >= config.MAX_UNIVERSE_STEPS) {
@@ -62,8 +61,8 @@ Universe.prototype.step = function () {
       util.log(daemon)
     }
 
-    this.alive = false;
-    return this;
+    universe = Universe.die(universe);
+    return universe;
   };
   
   // Get code at location
@@ -71,23 +70,23 @@ Universe.prototype.step = function () {
 
   if ( ! block || ! block.get('code') )  {
     util.log('Error reading tape: ' + Block.toString(block))
-    util.log(Tape.toString(this.tape))
+    util.log(Tape.toString(universe.get('tape')))
 
-    this.alive = false;
-    return this;
+    universe = Universe.die(universe);
+    return universe;
   }
 
   var blockInfo = Block.getInfo(block);
 
   if (typeof blockInfo == 'function') blockInfo = blockInfo({
-    left: Tape.getBlocks(Tape.beginning(this.tape), daemon.get('offset'))
+    left: Tape.getBlocks(Tape.beginning(universe.get('tape')), daemon.get('offset'))
   });
 
   if ( ! blockInfo ) {
     util.log('Couldn\'t execute block ' + Block.toString(block))
 
-    this.alive = false;
-    return this;
+    universe = Universe.die(universe);
+    return universe;
   }
 
   var inputs = blockInfo.inputs == 0
@@ -95,8 +94,8 @@ Universe.prototype.step = function () {
                 : Tape.getBlocks(daemon, blockInfo.inputs * -1)
                     .map(Block.getValue);
 
-  var sideEffects = this.sideEffects();
-  var accessors = this.accessors();
+  var sideEffects = Universe.sideEffects(universe);
+  var accessors = Universe.accessors(universe);
 
   if (blockInfo.sideEffects) {
     blockInfo.op(inputs, _.extend(sideEffects, accessors));
@@ -108,17 +107,21 @@ Universe.prototype.step = function () {
   }
 
   // If the daemon's been moved already, then don't move it
-  this.daemon = this.daemon == daemon
-                ? Tape.next(this.daemon)
-                : this.daemon;
+  var nextDaemon = universe.get('daemon') == daemon
+                    ? Tape.next(universe.get('daemon'))
+                    : universe.get('daemon')
 
-  this.daemon = this.daemon.set('tape', this.tape);
+  nextDaemon = nextDaemon.set('tape', universe.get('tape'));
+  universe = universe.set('daemon', nextDaemon);
 
-  return this;
+  // Does immutablejs have an atomic increment?
+  universe = universe.set('stepsTaken', universe.get('stepsTaken')++)
+
+  return universe
 }
 
-Universe.prototype.sideEffects = function () { 
-  var self = this;
+Universe.sideEffects = function (universe) { 
+  var self = universe;
 
   return {
     end: function () {
@@ -142,8 +145,8 @@ Universe.prototype.sideEffects = function () {
   }
 }
 
-Universe.prototype.accessors = function () {
-  var self = this;
+Universe.accessors = function (universe) {
+  var self = universe;
 
   return {
     handleOrOffsetLocation: function (handleOrOffset) {
@@ -175,8 +178,10 @@ Universe.prototype.accessors = function () {
   }
 }
 
-Universe.prototype.record = function () {
-  this.history.push(this.tape);
+Universe.record = function (universe) {
+  universe.set('history', universe.get('history').push(Tape.toString(universe.get('tape'))))
+
+  return universe; 
 }
 
 Universe.prototype.copy = function () {
@@ -187,7 +192,7 @@ Universe.prototype.copy = function () {
   cpy.history = this.history.slice();
   cpy.alive = this.alive;
   cpy.log = this.log.slice();
-  
+
   return cpy;
 }
 
