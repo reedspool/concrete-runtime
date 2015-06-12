@@ -8,7 +8,6 @@
 var Bacon = require('baconjs'),
     _ = require('lodash'),
     assert = require('assert'),
-    Universe = require('../core/Universe.js'),
     config = require('../core/config.js'),
     util = require('../core/util.js'),
     Tape = require('../core/Tape.js'),
@@ -66,16 +65,16 @@ var tests = {
 }
 
 Bacon.fromArray(_.keys(tests))
-  .map(Universe.fromString)
+  .map(BaconUniverse.fromString)
   .flatMapLatest(function (universe) {
     return BaconUniverse.asBlockingStream(universe)
   })
-  .filter(function (u1) { return ! u1.alive })
   .filter(function (u1) { return  !(u1[0] && u1[0] == '<no-more>'); })
+  .filter(function (u1) { return u1 && ! u1.get('alive') })
   .bufferingThrottle(60)
   .onValue(function (u1) {
-    var actual_output = Tape.toString(u1.tape);
-    var original_input = Tape.toString(u1.history[0]);
+    var actual_output = Tape.toString(u1.get('tape'));
+    var original_input = Tape.toString(u1.get('history')[0]);
     var expected_output = tests[original_input];
     var str = 
       '\n' +

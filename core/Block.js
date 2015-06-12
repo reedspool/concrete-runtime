@@ -8,32 +8,6 @@ module.exports = Block
 
 function Block() {}
 
-function __inputCount(fold) {
-  var blocks = fold.getIn(['code', 'tape', 'blocks']);
-  var i = 0;
-  var length = blocks.size;
-
-  while (Block.matches(blocks.get(i), Block.fromString('_')) 
-          && i < length) {
-    i++
-  }
-
-  return i;
-}
-
-function __outputCount(fold) {
-  var blocks = fold.getIn(['code', 'tape', 'blocks']);
-  var i = blocks.size - 1;
-  var count = 0;
-
-  while (Block.matches(blocks.get(i), Block.fromString('_')) 
-          && i >= 0) {
-    i--;
-    count++;
-  }
-
-  return count;
-}
 
 Block.fromString = function(original) {
   var tape = Parser.parse(original);
@@ -122,11 +96,8 @@ Block.matches = function(a, b) {
   return Block.getValue(a) == Block.getValue(b)
 }
 
-Block.getInfo = function (block) {
-  return __getCodeInfo(__opcode(block));
-}
+Block.opCode = function (block) {
 
-function __opcode(block) {
   if ( ! block.get('code').get || ! block.get('code').get('type')) {
     // Literal
     return block.get('code');
@@ -145,12 +116,10 @@ function __getCodeInfo(opcode) {
   var base = {
     inputs: 0,
     out: 0,
-    sideEffects: false,
     op: function () {}
   };
 
   var END = {
-    sideEffects: true,
     op: function (input, sides) { sides.end(); }
   }
   
@@ -311,7 +280,6 @@ function __getCodeInfo(opcode) {
     'jump': {
       inputs: 1,
       out: 0,
-      sideEffects: true,
       op: function (inputs, sides) { 
         sides.jump(sides.handleOrOffsetLocation(inputs.get(0)))
       }
@@ -319,7 +287,6 @@ function __getCodeInfo(opcode) {
     'move': {
       inputs: 2,
       out: 0,
-      sideEffects: true,
       op: function (inputs, sides) { 
         sides.writeFromTo(sides.handleOrOffsetLocation(inputs.get(0)), sides.handleOrOffsetLocation(inputs.get(1)))
       }
@@ -327,7 +294,6 @@ function __getCodeInfo(opcode) {
     'get': {
       inputs: 1,
       out: 1,
-      sideEffects: true,
       op: function (inputs, sides) { 
         sides.output([sides.valueAtLocation(sides.handleOrOffsetLocation(inputs.get(0)))])
       }
@@ -335,7 +301,6 @@ function __getCodeInfo(opcode) {
     'print': {
       inputs: 1,
       out: 0,
-      sideEffects: true,
       op: function (inputs, sides) { 
         sides.println(inputs.get(0))
       }
@@ -343,7 +308,6 @@ function __getCodeInfo(opcode) {
     '.': {
       inputs: 1,
       out: 0,
-      sideEffects: true,
       op: function (inputs, sides) { 
         if(true) debugger; /* TESTING - Delete me */
         sides.print(inputs.get(0))
