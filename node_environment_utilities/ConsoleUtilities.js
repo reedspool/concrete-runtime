@@ -11,7 +11,7 @@ function printUniverse(universe) {
   var daemonBlock = Tape.getBlock(universe.get('daemon'));
   var daemonIndex;
 
-  var lilConsole = universe.get('log').join('\n')
+  var lilConsole = universe.get('extras').get('log') && universe.get('extras').get('log').join('\n')
   var w = util.log;
 
   if ( ! universe.get('alive') ) {
@@ -32,7 +32,7 @@ function printUniverse(universe) {
     index++;
 
     var block = Tape.getBlock(loc);
-    
+    if(!block || ! daemonBlock) debugger; /* TESTING - Delete me */
     if (Block.matches(block, daemonBlock)) {
       daemonIndex = index
     }
@@ -67,8 +67,11 @@ if(!daemonWord) debugger; /* TESTING - Delete me */
   w('\n');
   w('Daemon at ' + daemonIndex + ' which is ' + daemonWord.sumSoFar)
   w('\n');
-  w('My Little Console: ')
-  w(lilConsole);
+
+  if (lilConsole) {
+    w('My Little Console: ')
+    w(lilConsole);
+  }
 
 }
 

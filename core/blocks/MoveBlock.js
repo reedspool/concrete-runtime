@@ -10,12 +10,12 @@ var MoveBlock = {
     // Get necessary stuff out
     var daemon = universe.get('daemon');
 
-    var inputs = BlockUtilities.getInputs(daemon, MoveBlock.inputs * -1)
+    var inputs = BlockUtilities.getBlocks(daemon, -1, MoveBlock.inputs * -1)
 
-    var source = BlockUtilities.handleOrOffsetLocation(inputs.get(0));
-    var dest = BlockUtilities.handleOrOffsetLocation(inputs.get(1))
+    var source = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(0));
+    var dest = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(1))
 
-    var editedUniverse = BlockUtilities.writeFromTo(source, dest)
+    var editedUniverse = BlockUtilities.writeFromTo(universe, source, dest)
 
     return BlockUtilities.stepDaemon(editedUniverse)
   }

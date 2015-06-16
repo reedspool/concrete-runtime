@@ -9,14 +9,14 @@ var GetBlock = {
   executable: function (universe) { 
     // Get necessary stuff out
     var daemon = universe.get('daemon');
+if(true) debugger; /* TESTING - Delete me */
+    var inputs = BlockUtilities.getBlocks(daemon, -1, GetBlock.inputs * -1)
 
-    var inputs = BlockUtilities.getInputs(daemon, GetBlock.inputs * -1)
+    var location = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(0))
 
-    var location = BlockUtilities.handleOrOffsetLocation(inputs.get(0))
+    var result = BlockUtilities.getBlock(location, 0);
 
-    var result = BlockUtilities.valueAtLocation(location);
-
-    var output = BlockUtilities.outputToBlocks([result])
+    var output = Immutable.List([result])
 
     var editedUniverse = BlockUtilities.setOutput(universe, output)
 

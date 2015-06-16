@@ -15,7 +15,15 @@ var Bacon = require('baconjs')
           require('./blocks/PrintBlock.js'),
           require('./blocks/PrintLineBlock.js'),
           require('./blocks/ProductBlock.js'),
-          require('./blocks/SumBlock.js')
+          require('./blocks/SumBlock.js'),
+          require('./blocks/StringBlock.js'),
+          require('./blocks/FalseyBlock.js'),
+          require('./blocks/ReduceBlock.js'),
+          require('./blocks/TimesBlock.js'),
+          require('./blocks/DivisionBlock.js'),
+          require('./blocks/DifferenceBlock.js'),
+          require('./blocks/LessThanBlock.js'),
+          require('./blocks/AddressBlock.js')
   ];
 
 Universe.asStream = function(universe) {

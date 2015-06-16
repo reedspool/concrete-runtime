@@ -1,22 +1,22 @@
 var Immutable = require('immutable');
 var BlockUtilities = require('./BlockUtilities.js')
 
-var ProductBlock = {
+var DifferenceBlock = {
   inputs: 2,
   outputs: 1,
-  op: '*',
+  op: '-',
   type: 'operator',
   executable: function (universe) { 
     // Get necessary stuff out
     var daemon = universe.get('daemon');
 
-    var inputs = BlockUtilities.getInputs(daemon, ProductBlock.inputs * -1)
+    var inputs = BlockUtilities.getInputs(daemon, DifferenceBlock.inputs * -1)
 
-    var result = inputs
+    var sum = inputs
                 .map(function (d) { return parseInt(d, 10); })
-                .reduce(function (a, b) { return a * b; }, 1)
+                .reduce(function (a, b) { return a - b; }, 0)
 
-    var output = BlockUtilities.outputToBlocks([result])
+    var output = BlockUtilities.outputToBlocks([sum])
 
     var editedUniverse = BlockUtilities.setOutput(universe, output)
 
@@ -24,4 +24,4 @@ var ProductBlock = {
   }
 }
 
-module.exports = ProductBlock
+module.exports = DifferenceBlock

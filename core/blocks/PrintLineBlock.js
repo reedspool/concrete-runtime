@@ -12,7 +12,8 @@ var PrintLineBlock = {
 
     var inputs = BlockUtilities.getInputs(daemon, PrintLineBlock.inputs * -1)
 
-    var location = BlockUtilities.println(inputs.get(0))
+    
+    universe = BlockUtilities.println(universe, inputs.get(0))
 
     return BlockUtilities.stepDaemon(universe)
   }

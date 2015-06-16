@@ -28,7 +28,6 @@ Block.toString = function(block) {
       str = code;
       break;
     case "fold": 
-    if(true) debugger; /* TESTING - Delete me */
       str = "[" + code.get('tape').get('original') + "]"
       break;
     case "number": 
@@ -97,7 +96,8 @@ Block.matches = function(a, b) {
 }
 
 Block.opCode = function (block) {
-
+  if(!block) debugger; /* TESTING - Delete me */
+  
   if ( ! block.get('code').get || ! block.get('code').get('type')) {
     // Literal
     return block.get('code');
@@ -127,89 +127,6 @@ function __getCodeInfo(opcode) {
    * Super shitty registry for now. create this dynamic so we can have modules
    */
   var specifics = {
-    noop: base,
-    value: base,
-    number: base,
-    address: base,
-    '_': base,
-
-    '+': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs, sides) { 
-          sides.output(Immutable.List([parseInt(inputs.get(0), 10) + parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-        }
-    },
-    '-': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs, sides) { 
-          sides.output(Immutable.List([parseInt(inputs.get(0), 10) - parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-        }
-    },
-    '*': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs, sides) { 
-          sides.output(Immutable.List([parseInt(inputs.get(0), 10) * parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-        }
-    },
-    '/': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs, sides) { 
-          sides.output(Immutable.List([parseInt(inputs.get(0), 10) / parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-        }
-    },
-    '>': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs, sides) { 
-          var result = parseInt(inputs.get(0), 10) > parseInt(inputs.get(1), 10);
-
-          sides.output(Immutable.List([(result ? '"Greater Than"' : '!"Not Greater Than"') ].map(Block.fromString)))
-        }
-    },
-    '<': {
-      inputs: 2,
-      out: 1,
-      op: function (inputs, sides) { 
-          var result = parseInt(inputs.get(0), 10) < parseInt(inputs.get(1), 10);
-
-          sides.output(Immutable.List([(result ? '"Less Than"' : '!"Not Less Than"') ].map(Block.fromString)))
-        }
-    },
-    '?': {
-      inputs: 3,
-      out: 1,
-      op: function (inputs, sides) { 
-          var predicate = inputs.get(0);
-          var yes = inputs.get(1);
-          var no = inputs.get(2);
-
-          sides.output(Immutable.List([ '' + (predicate ? yes : no) ].map(Block.fromString)))
-        }
-    },
-    'call': function (environment) {
-      var fold = environment.left.last();
-
-      return {
-        inputs: __inputCount(fold) + 1,
-        out: __outputCount(fold),
-        op: function (inputs, sides) { 
-            // Chop off the actual fold;
-            inputs = inputs.pop();
-
-            // Turn them back into blocks
-            inputs = inputs.map(function (a) { return a + ''; }).map(Block.fromString);
-
-            // Call it
-            var output = sides.callFold(fold, inputs, __outputCount(fold))
-
-            sides.output(output)
-          }
-      }
-    },
     'times': function (environment) {
       var fold = environment.left.get(environment.left.size - 2);
 
@@ -277,43 +194,6 @@ function __getCodeInfo(opcode) {
           }
       }
     },
-    'jump': {
-      inputs: 1,
-      out: 0,
-      op: function (inputs, sides) { 
-        sides.jump(sides.handleOrOffsetLocation(inputs.get(0)))
-      }
-    },
-    'move': {
-      inputs: 2,
-      out: 0,
-      op: function (inputs, sides) { 
-        sides.writeFromTo(sides.handleOrOffsetLocation(inputs.get(0)), sides.handleOrOffsetLocation(inputs.get(1)))
-      }
-    },
-    'get': {
-      inputs: 1,
-      out: 1,
-      op: function (inputs, sides) { 
-        sides.output([sides.valueAtLocation(sides.handleOrOffsetLocation(inputs.get(0)))])
-      }
-    },
-    'print': {
-      inputs: 1,
-      out: 0,
-      op: function (inputs, sides) { 
-        sides.println(inputs.get(0))
-      }
-    },
-    '.': {
-      inputs: 1,
-      out: 0,
-      op: function (inputs, sides) { 
-        if(true) debugger; /* TESTING - Delete me */
-        sides.print(inputs.get(0))
-      }
-    },
-    END: END
   };
 
   var info = specifics[opcode];

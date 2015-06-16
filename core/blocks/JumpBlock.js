@@ -10,9 +10,9 @@ var JumpBlock = {
     // Get necessary stuff out
     var daemon = universe.get('daemon');
 
-    var inputs = BlockUtilities.getInputs(daemon, JumpBlock.inputs * -1)
+    var handleOrOffset = BlockUtilities.getBlock(daemon, -1)
 
-    var location = BlockUtilities.handleOrOffsetLocation(inputs.get(0))
+    var location = BlockUtilities.handleOrOffsetLocation(universe, handleOrOffset)
 
     return universe.set('daemon', location)
   }

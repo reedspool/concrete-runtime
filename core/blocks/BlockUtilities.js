@@ -69,12 +69,14 @@ module.exports = BU = {
    * 
    */
   outputToBlocks: function(output) {
-    return Immutable.List(output.map(function () { return Block.fromString('' + output); }))
+    return Immutable.List(output.map(function (d) {
+      return Block.fromString( d.toString ? d.toString() : '' + d);
+    }))
   },
   getInputs: function (daemon, number) {
     return Tape.getBlocks(daemon, number).map(Block.getValue)
   }, 
-  handleOrOffsetLocation: function (handleOrOffset) {
+  handleOrOffsetLocation: function (universe, handleOrOffset) {
     return Tape.getLocationFromHandleOrOffset(universe.get('tape'), handleOrOffset, universe.get('daemon'));
   },
   valueAtLocation: function (location) { 
@@ -87,7 +89,11 @@ module.exports = BU = {
     return Tape.getBlocks(Tape.next(location, offset), count);
   },
   callFold: function (fold, input, numOutputs, environment) {
-    var tape = Tape.create(fold.getIn(['code', 'tape']).toJS())
+    var tape = fold.getIn(['code', 'tape'])
+
+    tape = Tape.cullHandles(tape);
+    tape = Tape.halting(tape);
+
     var location = Tape.beginning(tape);
 
     // Replace blanks with inputs
@@ -99,8 +105,7 @@ module.exports = BU = {
       childUniverse = Universe.step(childUniverse, environment);
     }
 
-    // Rewind once from death,
-    location = Tape.previous(childUniverse.get('daemon'));
+    location = childUniverse.get('daemon')
 
     var output = Tape.getBlocks(location, numOutputs * -1)
 

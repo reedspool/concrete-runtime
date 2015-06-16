@@ -1,20 +1,20 @@
 var Immutable = require('immutable');
 var BlockUtilities = require('./BlockUtilities.js')
 
-var ProductBlock = {
+var LessThanBlock = {
   inputs: 2,
   outputs: 1,
-  op: '*',
+  op: '<',
   type: 'operator',
   executable: function (universe) { 
     // Get necessary stuff out
     var daemon = universe.get('daemon');
 
-    var inputs = BlockUtilities.getInputs(daemon, ProductBlock.inputs * -1)
+    var inputs = BlockUtilities.getInputs(daemon, LessThanBlock.inputs * -1)
 
-    var result = inputs
-                .map(function (d) { return parseInt(d, 10); })
-                .reduce(function (a, b) { return a * b; }, 1)
+    var gt = parseInt(inputs.get(0), 10) < parseInt(inputs.get(1), 10);
+    
+    var result = gt ? '"Less Than"' : '!"Not Less Than"'
 
     var output = BlockUtilities.outputToBlocks([result])
 
@@ -24,4 +24,4 @@ var ProductBlock = {
   }
 }
 
-module.exports = ProductBlock
+module.exports = LessThanBlock

@@ -11,14 +11,14 @@ var ConditionalBlock = {
     var daemon = universe.get('daemon');
 
     var inputs = BlockUtilities.getInputs(daemon, ConditionalBlock.inputs * -1)
-
+    var blockInputs = BlockUtilities.getBlocks(daemon, 0, -3)
     var predicate = inputs.get(0);
-    var yes = inputs.get(1);
-    var no = inputs.get(2);
+    var yes = blockInputs.get(0);
+    var no = blockInputs.get(1);
     
     var result = predicate ? yes : no
 
-    var output = BlockUtilities.outputToBlocks([result])
+    var output = Immutable.List([result])
 
     var editedUniverse = BlockUtilities.setOutput(universe, output)
 

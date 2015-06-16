@@ -15,8 +15,8 @@ Universe.create = function (tape) {
   u = u.set('tape', tape)
   u = u.set('daemon', Tape.beginning(u.get('tape')))
   u = u.set('tape', tape)
-  u = u.set('log', [])
-  u = u.set('history', [])
+  u = u.set('extras', Immutable.Map({}))
+  u = u.set('history', Immutable.List([]))
   u = u.set('alive', true)
   u = u.set('stepsTaken', 0)
 
@@ -77,10 +77,13 @@ Universe.daemonInBounds = function (universe) {
 Universe.evaluateBlockAtDaemon = function (universe, environment) {
   var daemon = universe.get('daemon');
   var block = Tape.getBlock(daemon);
+
+  if(!block) debugger; /* TESTING - Delete me */
+  
   var op_code = Block.opCode(block);
   var executable = Universe.getExecutable(op_code, environment);
 
-  if ( ! executable ) throw new Error('Sorry, it appears that no block has been registered for ' + Block.toString(block))
+  if ( ! executable ) throw new Error('Sorry, it appears that no block has been registered for ' + Block.toString(block) + ' opcode ' + op_code)
 
   return executable(universe, environment)
 }
@@ -99,25 +102,50 @@ if(!opfn) debugger; /* TESTING - Delete me */
 }
 
 Universe.record = function (universe) {
-  universe.set('history', universe.get('history').push(universe.get('tape')))
+  var history = universe.get('history')
 
-  return universe; 
+  var editedHistory = history.set(history.size, universe.get('tape'));
+
+  return universe.set('history', editedHistory); 
+}
+
+Universe.createLogIfNone = function (universe) {
+  var extras = universe.get('extras');
+
+  var log = extras.get('log');
+
+  if ( ! log ) {
+    extras = extras.set('log', Immutable.List([]))
+    return universe.set('extras', extras)
+  }
+
+  return universe;
 }
 
 Universe.println = function (universe, input) {
-  input = input.replace('_', ' ')
-  return universe.set('log', universe.get('log').push(input))
+  input = input.replace('_', ' ');
+
+  universe = Universe.createLogIfNone(universe)
+
+  var logged = universe.getIn(['extras', 'log']).push(input);
+
+  return universe.setIn(['extras', 'log'], logged)
 }
 
 Universe.print = function (universe, input) {
-  var previous = universe.get('log');
+  if(true) debugger; /* TESTING - Delete me */
+  universe = Universe.createLogIfNone(universe)
+
+  var previous = universe.getIn(['extras', 'log']);
 
   // Circuitously remove the last log, then append a string, then println
-  universe.set('log', previous.slice(0, previous.length - 1))
+  var editedLog = previous.slice(0, previous.size ? previous.size - 1 : 0);
+  
+  universe = universe.setIn(['extras', 'log'], editedLog);
 
-  var last = previous.pop() || '';
+  var last = previous.get(previous.size - 1) || '';
 
-  last += input;
+  last += input
 
   return Universe.println(universe, last);
 }
