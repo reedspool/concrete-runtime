@@ -36,7 +36,7 @@ function __getLocationIndex(location) {
   var index;
 
   if (__isHandle(location)) {
-    index = location.get('tape').getIn(['__handles', location.get('name')])
+    index = location.getIn(['tape', '__handles'])[location.get('name')]
   } else {
     index = location.get('offset')
   }
@@ -95,6 +95,7 @@ Tape.beginning = function(tape) {
 }
 
 Tape.next = function(location, n) {
+  // Accept all truthy values and zero
   n = n == 0
       ? 0 
       : n || 1;
@@ -110,8 +111,8 @@ Tape.previous = function(location) {
 
 Tape.getLocationFromHandleOrOffset = function(tape, handleOrOffset, anchor) {
   return Block.opCode(handleOrOffset) == 'number'
-    ? Tape.next(anchor, Block.getValue(handleOrOffset))
-    : __createHandleLocation(tape, handleOrOffset.get('name'))
+    ? Tape.next(anchor, parseInt(Block.getValue(handleOrOffset), 10))
+    : __createHandleLocation(tape, handleOrOffset.get('code').get('value'))
 }
 
 Tape.inBounds = function(location) {

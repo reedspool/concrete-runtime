@@ -39,12 +39,12 @@ var tests = {
     '3 4 + 7 5 > "Greater Than" "bigger" "smaller" ? "bigger" END',
 
   // Fibs
-  '0#A 1#B + _#C . "," . _ . @B @A move @C @B move 0#I 1 + _#J 20 > _ 6 0 ? _ jump @J @I move @A jump END':
-    '10946#A 17711#B + 17711#C . "," . _ . @B @A move @C @B move 20#I 1 + 21#J 20 > "Greater Than" 6 0 ? 6 jump @J @I move @A jump END',
+  '0#A 1#B + _#C . ", " . @B @A move @C @B move 0#I 1 + _#J 20 > _ @FIN 1 ? _ jump @J @I move @A jump END#FIN':
+    '10946#A 17711#B + 17711#C . ", " . @B @A move @C @B move 20#I 1 + 21#J 20 > "Greater Than" @FIN 1 ? @FIN jump @J @I move @A jump END#FIN',
 
   // While loop
-  '0#A 1 + _#B 5 > _ 6 0 ? _ jump @B @A move @A jump END':
-    '5#A 1 + 6#B 5 > "Greater Than" 6 0 ? 6 jump @B @A move @A jump END',
+  '0#A 1 + _#B 5 > _ 6 1 ? _ jump @B @A move @A jump END':
+    '5#A 1 + 6#B 5 > "Greater Than" 6 1 ? 6 jump @B @A move @A jump END',
 
   // Names
   '4#A @A get _ END': '4#A @A get 4 END',

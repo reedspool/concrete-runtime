@@ -11,12 +11,15 @@ var DifferenceBlock = {
     var daemon = universe.get('daemon');
 
     var inputs = BlockUtilities.getInputs(daemon, DifferenceBlock.inputs * -1)
+                  .map(function (d) { return parseInt(d, 10); })
 
-    var sum = inputs
-                .map(function (d) { return parseInt(d, 10); })
-                .reduce(function (a, b) { return a - b; }, 0)
+    
+    var a = inputs.get(0)
+    var b = inputs.get(1)
 
-    var output = BlockUtilities.outputToBlocks([sum])
+    var difference = a - b;
+
+    var output = BlockUtilities.outputToBlocks([difference])
 
     var editedUniverse = BlockUtilities.setOutput(universe, output)
 

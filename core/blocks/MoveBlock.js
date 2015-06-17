@@ -10,7 +10,7 @@ var MoveBlock = {
     // Get necessary stuff out
     var daemon = universe.get('daemon');
 
-    var inputs = BlockUtilities.getBlocks(daemon, -1, MoveBlock.inputs * -1)
+    var inputs = BlockUtilities.getBlocks(daemon, -2, MoveBlock.inputs)
 
     var source = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(0));
     var dest = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(1))

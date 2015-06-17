@@ -4,9 +4,9 @@ var Universe = require('../core/BaconUniverse.js'),
 // While loop
 // var INPUT = '0#A 1 + _#B 5 > _ 6 0 ? _ jump @B @A move @A jump';
 
-var INTERVAL = 1000;
+var INTERVAL = 120;
 // var INPUT = '[ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _#A @A get _ ] 1 reduce _ END'
-var INPUT = '1 1 * _#A @A get _'
+var INPUT = '0#A 1#B + _#C . ", " . @B @A move @C @B move 0#I 1 + _#J 20 > _ @FIN 1 ? _ jump @J @I move @A jump END#FIN'
 
 
 var stream = Universe.asStream(Universe.fromString(INPUT))

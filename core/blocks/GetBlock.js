@@ -10,7 +10,7 @@ var GetBlock = {
     // Get necessary stuff out
     var daemon = universe.get('daemon');
 if(true) debugger; /* TESTING - Delete me */
-    var inputs = BlockUtilities.getBlocks(daemon, -1, GetBlock.inputs * -1)
+    var inputs = BlockUtilities.getBlocks(daemon, -1, GetBlock.inputs)
 
     var location = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(0))
 

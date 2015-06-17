@@ -76,8 +76,8 @@ module.exports = BU = {
   getInputs: function (daemon, number) {
     return Tape.getBlocks(daemon, number).map(Block.getValue)
   }, 
-  handleOrOffsetLocation: function (universe, handleOrOffset) {
-    return Tape.getLocationFromHandleOrOffset(universe.get('tape'), handleOrOffset, universe.get('daemon'));
+  handleOrOffsetLocation: function (universe, handleOrOffsetBlock) {
+    return Tape.getLocationFromHandleOrOffset(universe.get('tape'), handleOrOffsetBlock, universe.get('daemon'));
   },
   valueAtLocation: function (location) { 
     return Tape.getBlock(location);

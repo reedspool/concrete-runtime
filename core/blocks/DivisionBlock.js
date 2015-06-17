@@ -11,12 +11,14 @@ var DivisionBlock = {
     var daemon = universe.get('daemon');
 
     var inputs = BlockUtilities.getInputs(daemon, DivisionBlock.inputs * -1)
-
-    var result = inputs
                 .map(function (d) { return parseInt(d, 10); })
-                .reduce(function (a, b) { return b / a; }, 1)
 
-    var output = BlockUtilities.outputToBlocks([result])
+    var a = inputs.get(0)
+    var b = inputs.get(1)
+
+    var difference = a / b;
+
+    var output = BlockUtilities.outputToBlocks([difference])
 
     var editedUniverse = BlockUtilities.setOutput(universe, output)
 
