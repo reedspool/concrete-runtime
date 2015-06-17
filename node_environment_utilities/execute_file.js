@@ -6,15 +6,13 @@ var Bacon = require('baconjs'),
     ConsoleUtilities = require('./ConsoleUtilities.js'),
     fs = require('fs');
 
-var INTERVAL = 60;
+var INTERVAL = 750;
 var FILE_NAME = process.argv[2];
 
 fs.readFile(FILE_NAME, 'utf8', function (err,data) {
   if (err) {
     return console.log(err);
   }
-
-
 
   var stream = BaconUniverse.asStream(Universe.fromString(data))
     .bufferingThrottle(INTERVAL);
