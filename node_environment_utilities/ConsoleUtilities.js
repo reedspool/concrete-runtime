@@ -7,19 +7,19 @@ var Immutable = require('immutable');
 
 function printUniverse(universe) {
   var word_beginning_indicis = [];
-  var tape = universe.tape;
-  var daemonBlock = Tape.getBlock(universe.daemon);
+  var tape = universe.get('tape');
+  var daemonBlock = Tape.getBlock(universe.get('daemon'));
   var daemonIndex;
-  if(true) debugger; /* TESTING - Delete me */
-  var lilConsole = universe.log.join('\n')
+
+  var lilConsole = universe.get('extras').get('log') && universe.get('extras').get('log').join('\n')
   var w = util.log;
 
-  if ( ! universe.alive ) {
+  if ( ! universe.get('alive') ) {
     w('Done')
     return;
   }
 
-  if (! Tape.inBounds(universe.daemon) ) {
+  if (! Tape.inBounds(universe.get('daemon')) ) {
     w('Daemon outside boundaries!')
   }
 
@@ -32,8 +32,8 @@ function printUniverse(universe) {
     index++;
 
     var block = Tape.getBlock(loc);
-    
-    if (block == daemonBlock) {
+    if(!block || ! daemonBlock) debugger; /* TESTING - Delete me */
+    if (Block.matches(block, daemonBlock)) {
       daemonIndex = index
     }
     
@@ -48,13 +48,13 @@ function printUniverse(universe) {
     loc = Tape.next(loc)
   }
 
-  if (! Tape.inBounds(universe.daemon) ) {
+  if (! Tape.inBounds(universe.get('daemon')) ) {
     w('Daemon outside boundaries!')
     return;
   }
 
   var daemonWord = word_beginning_indicis[daemonIndex];
-
+if(!daemonWord) debugger; /* TESTING - Delete me */
   w('\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n')
   w(Tape.toString(tape));
   w(
@@ -67,8 +67,11 @@ function printUniverse(universe) {
   w('\n');
   w('Daemon at ' + daemonIndex + ' which is ' + daemonWord.sumSoFar)
   w('\n');
-  w('My Little Console: ')
-  w(lilConsole);
+
+  if (lilConsole) {
+    w('My Little Console: ')
+    w(lilConsole);
+  }
 
 }
 
