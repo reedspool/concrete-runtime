@@ -59,8 +59,6 @@ Tape.create = function (parsed) {
 }
 
 Tape.cullHandles = function (tape) {
-if(true) debugger; /* TESTING - Delete me */
-
   // Scan (top level) blocks for handles
   var handles = tape.get('blocks').reduce(function (memo, block, index) {
     if (block.get('name')) memo[block.get('name')] = index;
@@ -164,6 +162,7 @@ Tape.setBlocks = function(location, blocks) {
 }
 
 Tape.toString = function(tape) {
+
   var handlePositions = [];
 
   var handlez = tape.get('__handles');

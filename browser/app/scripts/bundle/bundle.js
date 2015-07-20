@@ -49,27 +49,62 @@
 
 	var Universe = __webpack_require__(/*! ./core/Universe.js */ 1),
 	    Tape = __webpack_require__(/*! ./core/Tape.js */ 11),
+	    Block = __webpack_require__(/*! ./core/Block.js */ 14),
 	    BaconUniverse = __webpack_require__(/*! ./core/BaconUniverse.js */ 15);
 	
 	var INTERVAL = 100;
 	
 	var $input = $('#Concrete-input');
 	var $output = $('#Concrete-output');
+	var $runButton = $('#Concrete-runButton');
 	
-	var textAreaProperty = function(textfield, initValue) {
+	function textAreaProperty($textfield, initValue) {
 	  var getValue;
 	  getValue = function() {
-	    return textfield.val() || textfield.html();
+	    return $textfield.val() || $textfield.html();
 	  };
 	  if (initValue !== null) {
-	    textfield.html(initValue);
+	    $textfield.html(initValue);
 	  }
-	  return textfield.asEventStream("keyup input")
-	            .merge(textfield.asEventStream("cut paste").delay(1))
+	  return $textfield.asEventStream("keyup input")
+	            .merge($textfield.asEventStream("cut paste").delay(1))
+	            .merge($runButton.asEventStream('click'))
 	            .map(getValue)
 	            .toProperty(getValue())
 	            .skipDuplicates();
-	};
+	}
+	
+	function htmlOutput(universe) {
+	  var tape = universe.get('tape');
+	  var daemon = universe.get('daemon');
+	  var offset = daemon.get('offset');
+	
+	  var handlePositions = [];
+	
+	  var handlez = tape.get('__handles');
+	
+	  for (var key in handlez) {
+	    handlePositions[handlez[key]] = key
+	  }
+	
+	  return tape.get('blocks')
+	    .map(function (block) { return Block.toString(block) })
+	    .map(function (block, i) { return handlePositions[i] 
+	                                      ? block + '#' + handlePositions[i] 
+	                                      : block; })
+	    .map(function (block, i) { 
+	      var className = 'block';
+	
+	      if (i == offset) className += ' daemon';
+	
+	      return '<div class="'
+	            + className
+	            + '">'
+	            + block
+	            + '</div>'
+	    })
+	    .join(' ')
+	}
 	
 	// Read from input
 	textAreaProperty($input)
@@ -84,15 +119,12 @@
 	      // Until no more...
 	      .filter(function (d) { return !(d[0] && d[0] == '<no-more>'); })
 	
-	      // Back to string
-	      .map(function (u) { return Tape.toString(u.tape) })
-	
-	
 	      // Then animate it nicely over an interval
 	      .bufferingThrottle(INTERVAL)
 	
 	  })
-	      .onValue($output.val.bind($output))
+	  .map(htmlOutput)
+	  .onValue($output.html.bind($output))
 
 
 /***/ },
@@ -110,24 +142,25 @@
 	    Block = __webpack_require__(/*! ./Block.js */ 14),
 	    Immutable = __webpack_require__(/*! immutable */ 13);
 	function Universe() {}
+	
 	module.exports = Universe
-	var __proto = new Universe();
 	
 	Universe.create = function (tape) {
-	  var u = Object.create(__proto);
+	  var u = Immutable.Map({})
 	
-	  u.tape = tape;
-	
-	  // For now, a daemon is just a location
-	  u.daemon = Tape.beginning(u.tape);
-	
-	  u.log = [];
-	
-	  u.history = [];
-	
-	  this.alive = true;
+	  u = u.set('tape', tape)
+	  u = u.set('daemon', Tape.beginning(u.get('tape')))
+	  u = u.set('tape', tape)
+	  u = u.set('extras', Immutable.Map({}))
+	  u = u.set('history', Immutable.List([]))
+	  u = u.set('alive', true)
+	  u = u.set('stepsTaken', 0)
 	
 	  return u;
+	}
+	
+	Universe.die = function (universe) {
+	  return universe.set('alive', false)
 	}
 	
 	Universe.fromString = function (codez) {
@@ -140,175 +173,118 @@
 	 * Step the universe exactly once.
 	 */
 	
-	Universe.prototype.stepsTaken = 0;
+	Universe.step = function (universe, environment) {
+	  var steps = universe.get('stepsTaken')
 	
-	Universe.prototype.step = function () {
-	  var steps = this.stepsTaken++;
-	
-	  if ( ! this.alive ) {
+	  if ( ! universe.get('alive') ) {
 	    util.log("Can't step further, I'm done!")
-	    return this;
+	
+	    return universe;
 	  }
 	
-	  this.record();
+	  universe = Universe.record(universe);
 	
-	  var daemon = this.daemon;
+	  if ( ! Universe.daemonInBounds(universe) ) {
+	    util.log("Tape out of bounds :-/")
 	
-	  if ( ! Tape.inBounds(daemon) ||
-	    steps >= config.MAX_UNIVERSE_STEPS) {
+	    return Universe.die(universe);
+	  }
 	
-	    if (steps >= config.MAX_UNIVERSE_STEPS) {
-	      util.log("Maximum allowed steps exceeded, good bye.")
-	    }
+	  if (steps >= config.MAX_UNIVERSE_STEPS) {
+	    util.log("Maximum allowed steps exceeded, good bye.")
 	
-	    if ( ! Tape.inBounds(daemon) ) {
-	      util.log("Tape out of bounds :-/")
-	      util.log(daemon)
-	    }
-	
-	    this.alive = false;
-	    return this;
-	  };
+	    return  Universe.die(universe);
+	  }
 	  
-	  // Get code at location
+	  universe = Universe.evaluateBlockAtDaemon(universe, environment);
+	 
+	  // ? Does immutablejs have an atomic increment?
+	  universe = universe.set('stepsTaken', universe.get('stepsTaken') + 1)
+	
+	  return universe
+	};
+	
+	Universe.daemonInBounds = function (universe) {
+	  var daemon = universe.get('daemon');
+	
+	  return Tape.inBounds(daemon)
+	}
+	
+	Universe.evaluateBlockAtDaemon = function (universe, environment) {
+	  var daemon = universe.get('daemon');
 	  var block = Tape.getBlock(daemon);
 	
-	  if ( ! block || ! block.get('code') )  {
-	    util.log('Error reading tape: ' + Block.toString(block))
-	    util.log(Tape.toString(this.tape))
+	  if(!block) debugger; /* TESTING - Delete me */
+	  
+	  var op_code = Block.opCode(block);
+	  var executable = Universe.getExecutable(op_code, environment);
 	
-	    this.alive = false;
-	    return this;
-	  }
+	  if ( ! executable ) throw new Error('Sorry, it appears that no block has been registered for ' + Block.toString(block) + ' opcode ' + op_code)
 	
-	  var blockInfo = Block.getInfo(block);
-	
-	  if (typeof blockInfo == 'function') blockInfo = blockInfo({
-	    left: Tape.getBlocks(Tape.beginning(this.tape), daemon.get('offset'))
-	  });
-	
-	  if ( ! blockInfo ) {
-	    util.log('Couldn\'t execute block ' + Block.toString(block))
-	
-	    this.alive = false;
-	    return this;
-	  }
-	
-	  var inputs = blockInfo.inputs == 0
-	                ? Immutable.List()
-	                : Tape.getBlocks(daemon, blockInfo.inputs * -1)
-	                    .map(Block.getValue);
-	
-	  var sideEffects = this.sideEffects();
-	  var accessors = this.accessors();
-	
-	  if (blockInfo.sideEffects) {
-	    blockInfo.op(inputs, _.extend(sideEffects, accessors));
-	  } else {
-	    // Reduce privilege to only output
-	    blockInfo.op(inputs, _.extend({
-	      output: sideEffects.output
-	    }, accessors))
-	  }
-	
-	  // If the daemon's been moved already, then don't move it
-	  this.daemon = this.daemon == daemon
-	                ? Tape.next(this.daemon)
-	                : this.daemon;
-	
-	  this.daemon = this.daemon.set('tape', this.tape);
-	
-	  return this;
+	  return executable(universe, environment)
 	}
 	
-	Universe.prototype.sideEffects = function () { 
-	  var self = this;
+	Universe.getExecutable = function (op_code, environment) {
+	  var opfn;
 	
-	  return {
-	    end: function () {
-	      self.alive = false;
-	    }, 
-	    jump: function (location) {
-	      self.daemon = location;
-	    },
-	    writeFromTo: function (source, destination) { 
-	      self.tape = Tape.setBlock(destination, Tape.getBlock(source))
-	    },
-	    output: function (output) {
-	      self.tape = Tape.setBlocks(Tape.next(self.daemon), Immutable.List(output))
-	    },
-	    println: function (input) {
-	      self.println(input.toString())
-	    },
-	    print: function (input) {
-	      self.print(input.toString())
+	  environment.forEach(function (d, i) {
+	    if (d.op == op_code) {
+	      // TODO: CHange this to d.executable
+	      opfn = d.executable
 	    }
+	  })
+	if(!opfn) debugger; /* TESTING - Delete me */
+	  return opfn;
+	}
+	
+	Universe.record = function (universe) {
+	  var history = universe.get('history')
+	
+	  var editedHistory = history.set(history.size, universe.get('tape'));
+	
+	  return universe.set('history', editedHistory); 
+	}
+	
+	Universe.createLogIfNone = function (universe) {
+	  var extras = universe.get('extras');
+	
+	  var log = extras.get('log');
+	
+	  if ( ! log ) {
+	    extras = extras.set('log', Immutable.List([]))
+	    return universe.set('extras', extras)
 	  }
+	
+	  return universe;
 	}
 	
-	Universe.prototype.accessors = function () {
-	  var self = this;
+	Universe.println = function (universe, input) {
+	  input = input.replace('_', ' ');
 	
-	  return {
-	    handleOrOffsetLocation: function (handleOrOffset) {
-	      return Tape.getLocationFromHandleOrOffset(self.tape, handleOrOffset, self.daemon);
-	    },
-	    valueAtLocation: function (location) { 
-	      return Tape.getBlock(location);
-	    },
-	    callFold: function (fold, input, numOutputs) {
-	      var tape = Tape.create(fold.getIn(['code', 'tape']).toJS())
-	      var location = Tape.beginning(tape);
+	  universe = Universe.createLogIfNone(universe)
 	
-	      // Replace blanks with inputs
-	      tape = Tape.setBlocks(location, input);
+	  var logged = universe.getIn(['extras', 'log']).push(input);
 	
-	      var universe = Universe.create(tape);
-	
-	      while (universe.alive) { universe.step() }
-	
-	      // Rewind once from death,
-	      location = Tape.previous(universe.daemon);
-	      // // Twice from inserted 'END'
-	      // location = Tape.previous(location);
-	
-	      var output = Tape.getBlocks(location, numOutputs * -1)
-	
-	      return output;
-	    }
-	  }
+	  return universe.setIn(['extras', 'log'], logged)
 	}
 	
-	Universe.prototype.record = function () {
-	  this.history.push(this.tape);
+	Universe.print = function (universe, input) {
+	  if(true) debugger; /* TESTING - Delete me */
+	  universe = Universe.createLogIfNone(universe)
+	
+	  var previous = universe.getIn(['extras', 'log']);
+	
+	  // Circuitously remove the last log, then append a string, then println
+	  var editedLog = previous.slice(0, previous.size ? previous.size - 1 : 0);
+	  
+	  universe = universe.setIn(['extras', 'log'], editedLog);
+	
+	  var last = previous.get(previous.size - 1) || '';
+	
+	  last += input
+	
+	  return Universe.println(universe, last);
 	}
-	
-	Universe.prototype.copy = function () {
-	  var cpy = Universe.create(this.tape);
-	
-	  cpy.daemon = this.daemon.set('tape', cpy.tape)
-	  cpy.stepsTaken = this.stepsTaken;
-	  cpy.history = this.history.slice();
-	  cpy.alive = this.alive;
-	
-	  return cpy;
-	}
-	
-	Universe.prototype.println = function (input) {
-	  input = input.replace('_', ' ')
-	  this.log.push(input)
-	}
-	
-	Universe.prototype.print = function (input) {
-	  var last = this.log.pop() || '';
-	
-	  last += input;
-	
-	  this.println(last);
-	}
-	
-	Universe.prototype.alive = true;
-	
 
 
 /***/ },
@@ -13754,7 +13730,7 @@
 	  var index;
 	
 	  if (__isHandle(location)) {
-	    index = location.get('tape').getIn(['__handles', location.get('name')])
+	    index = location.getIn(['tape', '__handles'])[location.get('name')]
 	  } else {
 	    index = location.get('offset')
 	  }
@@ -13763,19 +13739,32 @@
 	}
 	
 	Tape.create = function (parsed) {
-	  // Scan (top level) blocks for handles
-	  var handles = parsed.blocks.reduce(function (memo, block, index) {
-	    if (block.name) memo[block.name] = index;
-	    return memo;
-	  }, {})
-	
 	  var tape = Immutable.fromJS({
 	    original: parsed.original,
 	    blocks: parsed.blocks,
 	    __isTape: true,
-	    __handles: handles
+	    __handles: undefined
 	  })
 	
+	  tape = Tape.cullHandles(tape)
+	  tape = Tape.halting(tape)
+	
+	  return tape;
+	}
+	
+	Tape.cullHandles = function (tape) {
+	  // Scan (top level) blocks for handles
+	  var handles = tape.get('blocks').reduce(function (memo, block, index) {
+	    if (block.get('name')) memo[block.get('name')] = index;
+	    return memo;
+	  }, {})
+	
+	  var editedTape = tape.set('__handles', handles)
+	
+	  return editedTape;
+	}
+	
+	Tape.halting = function (tape) {
 	  // There need be an END token
 	  if ( ! Tape.contains(tape, Block.fromString('END')) ) {
 	    // Broken... learn more about immutablejs pls
@@ -13798,7 +13787,10 @@
 	}
 	
 	Tape.next = function(location, n) {
-	  n = n || 1;
+	  // Accept all truthy values and zero
+	  n = n == 0
+	      ? 0 
+	      : n || 1;
 	
 	  var index = __getLocationIndex(location) + n;
 	
@@ -13810,9 +13802,9 @@
 	}
 	
 	Tape.getLocationFromHandleOrOffset = function(tape, handleOrOffset, anchor) {
-	  return typeof handleOrOffset == 'number'
-	    ? Tape.next(anchor, handleOrOffset)
-	    : __createHandleLocation(tape, handleOrOffset)
+	  return Block.opCode(handleOrOffset) == 'number'
+	    ? Tape.next(anchor, parseInt(Block.getValue(handleOrOffset), 10))
+	    : __createHandleLocation(tape, handleOrOffset.get('code').get('value'))
 	}
 	
 	Tape.inBounds = function(location) {
@@ -13829,7 +13821,7 @@
 	
 	Tape.getBlock = function(location) {
 	  var index = __getLocationIndex(location);
-	
+	if(!location.get('tape').getIn(['blocks', index])) debugger; /* TESTING - Delete me */
 	  return location.get('tape').getIn(['blocks', index]);
 	}
 	
@@ -13864,15 +13856,16 @@
 	}
 	
 	Tape.toString = function(tape) {
-	  var self = tape;
 	
 	  var handlePositions = [];
 	
-	  self.get('__handles').forEach(function (key, val) { 
-	    handlePositions[key] = val;
-	  })
+	  var handlez = tape.get('__handles');
 	
-	  return self.get('blocks')
+	  for (var key in handlez) {
+	    handlePositions[handlez[key]] = key
+	  }
+	
+	  return tape.get('blocks')
 	    .map(function (block) { return Block.toString(block) })
 	    .map(function (block, i) { return handlePositions[i] 
 	                                      ? block + '#' + handlePositions[i] 
@@ -23365,32 +23358,6 @@
 	
 	function Block() {}
 	
-	function __inputCount(fold) {
-	  var blocks = fold.getIn(['code', 'tape', 'blocks']);
-	  var i = 0;
-	  var length = blocks.size;
-	
-	  while (Block.matches(blocks.get(i), Block.fromString('_')) 
-	          && i < length) {
-	    i++
-	  }
-	
-	  return i;
-	}
-	
-	function __outputCount(fold) {
-	  var blocks = fold.getIn(['code', 'tape', 'blocks']);
-	  var i = blocks.size - 1;
-	  var count = 0;
-	
-	  while (Block.matches(blocks.get(i), Block.fromString('_')) 
-	          && i >= 0) {
-	    i--;
-	    count++;
-	  }
-	
-	  return count;
-	}
 	
 	Block.fromString = function(original) {
 	  var tape = Parser.parse(original);
@@ -23411,7 +23378,6 @@
 	      str = code;
 	      break;
 	    case "fold": 
-	    if(true) debugger; /* TESTING - Delete me */
 	      str = "[" + code.get('tape').get('original') + "]"
 	      break;
 	    case "number": 
@@ -23479,11 +23445,9 @@
 	  return Block.getValue(a) == Block.getValue(b)
 	}
 	
-	Block.getInfo = function (block) {
-	  return __getCodeInfo(__opcode(block));
-	}
-	
-	function __opcode(block) {
+	Block.opCode = function (block) {
+	  if(!block) debugger; /* TESTING - Delete me */
+	  
 	  if ( ! block.get('code').get || ! block.get('code').get('type')) {
 	    // Literal
 	    return block.get('code');
@@ -23502,12 +23466,10 @@
 	  var base = {
 	    inputs: 0,
 	    out: 0,
-	    sideEffects: false,
 	    op: function () {}
 	  };
 	
 	  var END = {
-	    sideEffects: true,
 	    op: function (input, sides) { sides.end(); }
 	  }
 	  
@@ -23515,89 +23477,6 @@
 	   * Super shitty registry for now. create this dynamic so we can have modules
 	   */
 	  var specifics = {
-	    noop: base,
-	    value: base,
-	    number: base,
-	    address: base,
-	    '_': base,
-	
-	    '+': {
-	      inputs: 2,
-	      out: 1,
-	      op: function (inputs, sides) { 
-	          sides.output(Immutable.List([parseInt(inputs.get(0), 10) + parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-	        }
-	    },
-	    '-': {
-	      inputs: 2,
-	      out: 1,
-	      op: function (inputs, sides) { 
-	          sides.output(Immutable.List([parseInt(inputs.get(0), 10) - parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-	        }
-	    },
-	    '*': {
-	      inputs: 2,
-	      out: 1,
-	      op: function (inputs, sides) { 
-	          sides.output(Immutable.List([parseInt(inputs.get(0), 10) * parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-	        }
-	    },
-	    '/': {
-	      inputs: 2,
-	      out: 1,
-	      op: function (inputs, sides) { 
-	          sides.output(Immutable.List([parseInt(inputs.get(0), 10) / parseInt(inputs.get(1), 10)].map(Block.fromNumber)))
-	        }
-	    },
-	    '>': {
-	      inputs: 2,
-	      out: 1,
-	      op: function (inputs, sides) { 
-	          var result = parseInt(inputs.get(0), 10) > parseInt(inputs.get(1), 10);
-	
-	          sides.output(Immutable.List([(result ? '"Greater Than"' : '!"Not Greater Than"') ].map(Block.fromString)))
-	        }
-	    },
-	    '<': {
-	      inputs: 2,
-	      out: 1,
-	      op: function (inputs, sides) { 
-	          var result = parseInt(inputs.get(0), 10) < parseInt(inputs.get(1), 10);
-	
-	          sides.output(Immutable.List([(result ? '"Less Than"' : '!"Not Less Than"') ].map(Block.fromString)))
-	        }
-	    },
-	    '?': {
-	      inputs: 3,
-	      out: 1,
-	      op: function (inputs, sides) { 
-	          var predicate = inputs.get(0);
-	          var yes = inputs.get(1);
-	          var no = inputs.get(2);
-	
-	          sides.output(Immutable.List([ '' + (predicate ? yes : no) ].map(Block.fromString)))
-	        }
-	    },
-	    'call': function (environment) {
-	      var fold = environment.left.last();
-	
-	      return {
-	        inputs: __inputCount(fold) + 1,
-	        out: __outputCount(fold),
-	        op: function (inputs, sides) { 
-	            // Chop off the actual fold;
-	            inputs = inputs.pop();
-	
-	            // Turn them back into blocks
-	            inputs = inputs.map(function (a) { return a + ''; }).map(Block.fromString);
-	
-	            // Call it
-	            var output = sides.callFold(fold, inputs, __outputCount(fold))
-	
-	            sides.output(output)
-	          }
-	      }
-	    },
 	    'times': function (environment) {
 	      var fold = environment.left.get(environment.left.size - 2);
 	
@@ -23665,47 +23544,6 @@
 	          }
 	      }
 	    },
-	    'jump': {
-	      inputs: 1,
-	      out: 0,
-	      sideEffects: true,
-	      op: function (inputs, sides) { 
-	        sides.jump(sides.handleOrOffsetLocation(inputs.get(0)))
-	      }
-	    },
-	    'move': {
-	      inputs: 2,
-	      out: 0,
-	      sideEffects: true,
-	      op: function (inputs, sides) { 
-	        sides.writeFromTo(sides.handleOrOffsetLocation(inputs.get(0)), sides.handleOrOffsetLocation(inputs.get(1)))
-	      }
-	    },
-	    'get': {
-	      inputs: 1,
-	      out: 1,
-	      sideEffects: true,
-	      op: function (inputs, sides) { 
-	        sides.output([sides.valueAtLocation(sides.handleOrOffsetLocation(inputs.get(0)))])
-	      }
-	    },
-	    'print': {
-	      inputs: 1,
-	      out: 0,
-	      sideEffects: true,
-	      op: function (inputs, sides) { 
-	        sides.println(inputs.get(0))
-	      }
-	    },
-	    '.': {
-	      inputs: 1,
-	      out: 0,
-	      sideEffects: true,
-	      op: function (inputs, sides) { 
-	        sides.print(inputs.get(0))
-	      }
-	    },
-	    END: END
 	  };
 	
 	  var info = specifics[opcode];
@@ -23723,16 +23561,42 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var Bacon = __webpack_require__(/*! baconjs */ 16)
+	  , Universe = __webpack_require__(/*! ./Universe.js */ 1)
+	  , blocks = [
+	          __webpack_require__(/*! ./blocks/BlankBlock.js */ 19),
+	          __webpack_require__(/*! ./blocks/BlockUtilities.js */ 20),
+	          __webpack_require__(/*! ./blocks/CallBlock.js */ 21),
+	          __webpack_require__(/*! ./blocks/ConditionalBlock.js */ 22),
+	          __webpack_require__(/*! ./blocks/EndBlock.js */ 23),
+	          __webpack_require__(/*! ./blocks/FoldBlock.js */ 24),
+	          __webpack_require__(/*! ./blocks/GetBlock.js */ 25),
+	          __webpack_require__(/*! ./blocks/GreaterThanBlock.js */ 26),
+	          __webpack_require__(/*! ./blocks/JumpBlock.js */ 27),
+	          __webpack_require__(/*! ./blocks/MoveBlock.js */ 28),
+	          __webpack_require__(/*! ./blocks/NumberBlock.js */ 29),
+	          __webpack_require__(/*! ./blocks/PrintBlock.js */ 30),
+	          __webpack_require__(/*! ./blocks/PrintLineBlock.js */ 31),
+	          __webpack_require__(/*! ./blocks/ProductBlock.js */ 32),
+	          __webpack_require__(/*! ./blocks/SumBlock.js */ 33),
+	          __webpack_require__(/*! ./blocks/StringBlock.js */ 34),
+	          __webpack_require__(/*! ./blocks/FalseyBlock.js */ 35),
+	          __webpack_require__(/*! ./blocks/ReduceBlock.js */ 36),
+	          __webpack_require__(/*! ./blocks/TimesBlock.js */ 37),
+	          __webpack_require__(/*! ./blocks/DivisionBlock.js */ 38),
+	          __webpack_require__(/*! ./blocks/DifferenceBlock.js */ 39),
+	          __webpack_require__(/*! ./blocks/LessThanBlock.js */ 40),
+	          __webpack_require__(/*! ./blocks/AddressBlock.js */ 41)
+	  ];
 	
-	exports.asStream = function(universe) {
+	Universe.asStream = function(universe) {
 	  return Bacon.fromBinder(function(sink) {
 	    
-	    sink(universe.copy());
+	    sink(universe);
 	
 	    function stepSink() { 
-	      if (universe.alive) {
-	        universe = universe.step()
-	        sink(universe.copy())
+	      if (universe.get('alive')) {
+	        universe = Universe.step(universe, blocks)
+	        sink(universe)
 	      } else {
 	        sink(Bacon.noMore)
 	      }
@@ -23745,14 +23609,14 @@
 	
 	}
 	
-	exports.asBlockingStream = function(universe) {
+	Universe.asBlockingStream = function(universe) {
 	  return Bacon.fromBinder(function(sink) {
 	    
-	    sink(universe.copy());
+	    sink(universe);
 	
-	    while (universe.alive) {
-	      universe = universe.step()
-	      sink(universe.copy())
+	    while (universe.get('alive')) {
+	      universe = Universe.step(universe, blocks)
+	      sink(universe)
 	    }
 	
 	    sink(Bacon.noMore)
@@ -23761,6 +23625,8 @@
 	  });
 	
 	}
+	
+	module.exports = Universe
 	
 	
 
@@ -27178,6 +27044,825 @@
 	/* WEBPACK VAR INJECTION */(function(__webpack_amd_options__) {module.exports = __webpack_amd_options__;
 	
 	/* WEBPACK VAR INJECTION */}.call(exports, {}))
+
+/***/ },
+/* 19 */
+/*!***********************************!*\
+  !*** ./core/blocks/BlankBlock.js ***!
+  \***********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var BlankBlock = {
+	  inputs: 0,
+	  outputs: 0,
+	  op: '_',
+	  type: 'noop',
+	  executable: BlockUtilities.stepDaemon
+	}
+	
+	module.exports = BlankBlock
+
+/***/ },
+/* 20 */
+/*!***************************************!*\
+  !*** ./core/blocks/BlockUtilities.js ***!
+  \***************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Tape = __webpack_require__(/*! ../Tape.js */ 11)
+	var Block = __webpack_require__(/*! ../Block.js */ 14)
+	
+	var Universe = __webpack_require__(/*! ../Universe.js */ 1)
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	
+	var BU;
+	
+	module.exports = BU = {
+	  /**
+	   * Constants
+	   * 
+	   */
+	  VARIABLE_OUTPUTS: -1,
+	  VARIABLE_INPUTS: -1,
+	
+	  /**
+	   * Side Effects
+	   * 
+	   */
+	  stepDaemon: function (universe) {
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var nextLocation = Tape.next(daemon);
+	
+	    nextLocation = nextLocation.set('tape', universe.get('tape'))
+	
+	    universe = universe.set('daemon', nextLocation);
+	
+	    return universe;
+	  },
+	
+	  setOutput: function (universe, blocks) {
+	    var location = Tape.next(universe.get('daemon'))
+	
+	    location = location.set('tape', universe.get('tape'))
+	
+	    return BU.setBlocks(universe, location, blocks)
+	  },
+	  setBlocks: function (universe, location, blocks) {
+	    var outputTape = Tape.setBlocks(location, blocks);
+	
+	    universe = universe.set('tape', outputTape)
+	
+	    return universe;
+	  },
+	  die: function (universe) {
+	    return universe.set('alive', false)
+	  }, 
+	  jump: function (universe, location) {
+	    return universe.set('daemon', location)
+	  },
+	  writeFromTo: function (universe, source, destination) { 
+	    return universe.set('tape', Tape.setBlock(destination, Tape.getBlock(source)))
+	  },
+	  output: function (universe, output) {
+	    return universe.set('tape', Tape.setBlocks(Tape.next(universe.get('daemon')), Immutable.List(output)))
+	  },
+	  println: function (universe, input) {
+	    return Universe.println(universe, input)
+	  },
+	  print: function (universe, input) {
+	    return Universe.print(universe, input)
+	  },
+	
+	  /**
+	   * Accessors
+	   * 
+	   */
+	  outputToBlocks: function(output) {
+	    return Immutable.List(output.map(function (d) {
+	      return Block.fromString( d.toString ? d.toString() : '' + d);
+	    }))
+	  },
+	  getInputs: function (daemon, number) {
+	    return Tape.getBlocks(daemon, number).map(Block.getValue)
+	  }, 
+	  handleOrOffsetLocation: function (universe, handleOrOffsetBlock) {
+	    return Tape.getLocationFromHandleOrOffset(universe.get('tape'), handleOrOffsetBlock, universe.get('daemon'));
+	  },
+	  valueAtLocation: function (location) { 
+	    return Tape.getBlock(location);
+	  },
+	  getBlock: function (location, offset) { 
+	    return Tape.getBlock(Tape.next(location, offset));
+	  },
+	  getBlocks: function (location, offset, count) { 
+	    return Tape.getBlocks(Tape.next(location, offset), count);
+	  },
+	  callFold: function (fold, input, numOutputs, environment) {
+	    var tape = fold.getIn(['code', 'tape'])
+	
+	    tape = Tape.cullHandles(tape);
+	    tape = Tape.halting(tape);
+	
+	    var location = Tape.beginning(tape);
+	
+	    // Replace blanks with inputs
+	    tape = Tape.setBlocks(location, input);
+	
+	    var childUniverse = Universe.create(tape);
+	
+	    while (childUniverse.get('alive')) { 
+	      childUniverse = Universe.step(childUniverse, environment);
+	    }
+	
+	    location = childUniverse.get('daemon')
+	
+	    var output = Tape.getBlocks(location, numOutputs * -1)
+	
+	    return output;
+	  },
+	
+	  inputCount: function (fold) {
+	    var blocks = fold.getIn(['code', 'tape', 'blocks']);
+	    var i = 0;
+	    var length = blocks.size;
+	
+	    while (Block.matches(blocks.get(i), Block.fromString('_')) 
+	            && i < length) {
+	      i++
+	    }
+	
+	    return i;
+	  },
+	
+	  outputCount: function (fold) {
+	    var blocks = fold.getIn(['code', 'tape', 'blocks']);
+	    var i = blocks.size - 1;
+	    var count = 0;
+	
+	    while (Block.matches(blocks.get(i), Block.fromString('_')) 
+	            && i >= 0) {
+	      i--;
+	      count++;
+	    }
+	
+	    return count;
+	  }
+	}
+
+/***/ },
+/* 21 */
+/*!**********************************!*\
+  !*** ./core/blocks/CallBlock.js ***!
+  \**********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var CallBlock = {
+	  inputs: BlockUtilities.VARIABLE_INPUTS,
+	  outputs: BlockUtilities.VARIABLE_OUTPUTS,
+	  op: 'call',
+	  type: 'operator',
+	  executable: function (universe, environment) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var fold = BlockUtilities.getBlock(daemon, -1)
+	
+	    var inputCount = BlockUtilities.inputCount(fold);
+	    var outputCount = BlockUtilities.outputCount(fold);
+	
+	    var inputs = BlockUtilities.getBlocks(daemon, -1, inputCount * -1)
+	
+	    var output = BlockUtilities.callFold(fold, inputs, outputCount, environment)
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = CallBlock
+
+/***/ },
+/* 22 */
+/*!*****************************************!*\
+  !*** ./core/blocks/ConditionalBlock.js ***!
+  \*****************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var ConditionalBlock = {
+	  inputs: 3,
+	  outputs: 1,
+	  op: '?',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, ConditionalBlock.inputs * -1)
+	    var blockInputs = BlockUtilities.getBlocks(daemon, -3, 3)
+	    var predicate = inputs.get(0);
+	    var no = blockInputs.get(2);
+	    var yes = blockInputs.get(1);
+	    if(true) debugger; /* TESTING - Delete me */
+	    var result = predicate ? yes : no
+	
+	    var output = Immutable.List([result])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = ConditionalBlock
+
+/***/ },
+/* 23 */
+/*!*********************************!*\
+  !*** ./core/blocks/EndBlock.js ***!
+  \*********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var EndBlock = {
+	  inputs: 0,
+	  outputs: 0,
+	  op: 'END',
+	  type: 'die',
+	  executable: BlockUtilities.die
+	}
+	
+	module.exports = EndBlock
+
+/***/ },
+/* 24 */
+/*!**********************************!*\
+  !*** ./core/blocks/FoldBlock.js ***!
+  \**********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var FoldBlock = {
+	  inputs: 0,
+	  outputs: 0,
+	  op: 'fold',
+	  type: 'fold',
+	  executable: BlockUtilities.stepDaemon
+	}
+	
+	module.exports = FoldBlock
+
+/***/ },
+/* 25 */
+/*!*********************************!*\
+  !*** ./core/blocks/GetBlock.js ***!
+  \*********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var GetBlock = {
+	  inputs: 1,
+	  outputs: 1,
+	  op: 'get',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	if(true) debugger; /* TESTING - Delete me */
+	    var inputs = BlockUtilities.getBlocks(daemon, -1, GetBlock.inputs)
+	
+	    var location = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(0))
+	
+	    var result = BlockUtilities.getBlock(location, 0);
+	
+	    var output = Immutable.List([result])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = GetBlock
+
+/***/ },
+/* 26 */
+/*!*****************************************!*\
+  !*** ./core/blocks/GreaterThanBlock.js ***!
+  \*****************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var GreaterThanBlock = {
+	  inputs: 2,
+	  outputs: 1,
+	  op: '>',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, GreaterThanBlock.inputs * -1)
+	
+	    var gt = parseInt(inputs.get(0), 10) > parseInt(inputs.get(1), 10);
+	    
+	    var result = gt ? '"Greater Than"' : '!"Not Greater Than"'
+	
+	    var output = BlockUtilities.outputToBlocks([result])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = GreaterThanBlock
+
+/***/ },
+/* 27 */
+/*!**********************************!*\
+  !*** ./core/blocks/JumpBlock.js ***!
+  \**********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var JumpBlock = {
+	  inputs: 1,
+	  outputs: 0,
+	  op: 'jump',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var handleOrOffset = BlockUtilities.getBlock(daemon, -1)
+	
+	    var location = BlockUtilities.handleOrOffsetLocation(universe, handleOrOffset)
+	
+	    return universe.set('daemon', location)
+	  }
+	}
+	
+	module.exports = JumpBlock
+
+/***/ },
+/* 28 */
+/*!**********************************!*\
+  !*** ./core/blocks/MoveBlock.js ***!
+  \**********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var MoveBlock = {
+	  inputs: 2,
+	  outputs: 0,
+	  op: 'move',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getBlocks(daemon, -2, MoveBlock.inputs)
+	
+	    var source = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(0));
+	    var dest = BlockUtilities.handleOrOffsetLocation(universe, inputs.get(1))
+	
+	    var editedUniverse = BlockUtilities.writeFromTo(universe, source, dest)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = MoveBlock
+
+/***/ },
+/* 29 */
+/*!************************************!*\
+  !*** ./core/blocks/NumberBlock.js ***!
+  \************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var NumberBlock = {
+	  inputs: 0,
+	  outputs: 0,
+	  op: 'number',
+	  type: 'number',
+	  executable: BlockUtilities.stepDaemon
+	}
+	
+	module.exports = NumberBlock
+
+/***/ },
+/* 30 */
+/*!***********************************!*\
+  !*** ./core/blocks/PrintBlock.js ***!
+  \***********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var PrintBlock = {
+	  inputs: 1,
+	  outputs: 0,
+	  op: '.',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, PrintBlock.inputs * -1)
+	
+	    universe = BlockUtilities.print(universe, inputs.get(0))
+	
+	    return BlockUtilities.stepDaemon(universe)
+	  }
+	}
+	
+	module.exports = PrintBlock
+
+/***/ },
+/* 31 */
+/*!***************************************!*\
+  !*** ./core/blocks/PrintLineBlock.js ***!
+  \***************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var PrintLineBlock = {
+	  inputs: 1,
+	  outputs: 0,
+	  op: 'print',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, PrintLineBlock.inputs * -1)
+	
+	    
+	    universe = BlockUtilities.println(universe, inputs.get(0))
+	
+	    return BlockUtilities.stepDaemon(universe)
+	  }
+	}
+	
+	module.exports = PrintLineBlock
+
+/***/ },
+/* 32 */
+/*!*************************************!*\
+  !*** ./core/blocks/ProductBlock.js ***!
+  \*************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var ProductBlock = {
+	  inputs: 2,
+	  outputs: 1,
+	  op: '*',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, ProductBlock.inputs * -1)
+	
+	    var result = inputs
+	                .map(function (d) { return parseInt(d, 10); })
+	                .reduce(function (a, b) { return a * b; }, 1)
+	
+	    var output = BlockUtilities.outputToBlocks([result])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = ProductBlock
+
+/***/ },
+/* 33 */
+/*!*********************************!*\
+  !*** ./core/blocks/SumBlock.js ***!
+  \*********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var SumBlock = {
+	  inputs: 2,
+	  outputs: 1,
+	  op: '+',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, SumBlock.inputs * -1)
+	
+	    var sum = inputs
+	                .map(function (d) { return parseInt(d, 10); })
+	                .reduce(function (a, b) { return a + b; }, 0)
+	
+	    var output = BlockUtilities.outputToBlocks([sum])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = SumBlock
+
+/***/ },
+/* 34 */
+/*!************************************!*\
+  !*** ./core/blocks/StringBlock.js ***!
+  \************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var StringBlock = {
+	  inputs: 0,
+	  outputs: 0,
+	  op: 'string',
+	  type: 'string',
+	  executable: BlockUtilities.stepDaemon
+	}
+	
+	module.exports = StringBlock
+
+/***/ },
+/* 35 */
+/*!************************************!*\
+  !*** ./core/blocks/FalseyBlock.js ***!
+  \************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var FalseyBlock = {
+	  inputs: 0,
+	  outputs: 0,
+	  op: 'falsey',
+	  type: 'falsey',
+	  executable: BlockUtilities.stepDaemon
+	}
+	
+	module.exports = FalseyBlock
+
+/***/ },
+/* 36 */
+/*!************************************!*\
+  !*** ./core/blocks/ReduceBlock.js ***!
+  \************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var ReduceBlock = {
+	  inputs: BlockUtilities.VARIABLE_INPUTS,
+	  outputs: BlockUtilities.VARIABLE_OUTPUTS,
+	  op: 'reduce',
+	  type: 'operator',
+	  executable: function (universe, environment) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	if(true) debugger; /* TESTING - Delete me */
+	    var list = BlockUtilities.getBlock(daemon, -3).getIn(['code', 'tape', 'blocks'])
+	    var fold = BlockUtilities.getBlock(daemon, -2);
+	    var initial = BlockUtilities.getBlock(daemon, -1);
+	
+	    var inputCount = BlockUtilities.inputCount(fold);
+	    var outputCount = BlockUtilities.outputCount(fold);
+	
+	    var inputs = BlockUtilities.getBlocks(daemon, -3, inputCount * -1)
+	
+	    var next;
+	    var memo;
+	
+	    var length = list.size;
+	    var i = 0;
+	    while (i < length) {
+	
+	      next = list.get(i)
+	      memo = output
+	        ? output.get(0) 
+	        : initial;
+	      inputs = Immutable.List([next, memo])
+	
+	      var output = BlockUtilities.callFold(fold, inputs, outputCount, environment)
+	
+	      // Reset inputs 
+	      i++;
+	    }
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = ReduceBlock
+
+/***/ },
+/* 37 */
+/*!***********************************!*\
+  !*** ./core/blocks/TimesBlock.js ***!
+  \***********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var TimesBlock = {
+	  inputs: BlockUtilities.VARIABLE_INPUTS,
+	  outputs: BlockUtilities.VARIABLE_OUTPUTS,
+	  op: 'times',
+	  type: 'operator',
+	  executable: function (universe, environment) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var num = BlockUtilities.getInputs(daemon, - 1)
+	    var fold = BlockUtilities.getBlock(daemon, - 2);
+	
+	    var inputCount = BlockUtilities.inputCount(fold);
+	    var outputCount = BlockUtilities.outputCount(fold);
+	
+	    var inputs = BlockUtilities.getBlocks(daemon, -2, inputCount * -1)
+	
+	    while (num-- > 0) {
+	      var output = BlockUtilities.callFold(fold, inputs, outputCount, environment)
+	    }
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = TimesBlock
+
+/***/ },
+/* 38 */
+/*!**************************************!*\
+  !*** ./core/blocks/DivisionBlock.js ***!
+  \**************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var DivisionBlock = {
+	  inputs: 2,
+	  outputs: 1,
+	  op: '/',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, DivisionBlock.inputs * -1)
+	                .map(function (d) { return parseInt(d, 10); })
+	
+	    var a = inputs.get(0)
+	    var b = inputs.get(1)
+	
+	    var difference = a / b;
+	
+	    var output = BlockUtilities.outputToBlocks([difference])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = DivisionBlock
+
+/***/ },
+/* 39 */
+/*!****************************************!*\
+  !*** ./core/blocks/DifferenceBlock.js ***!
+  \****************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var DifferenceBlock = {
+	  inputs: 2,
+	  outputs: 1,
+	  op: '-',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, DifferenceBlock.inputs * -1)
+	                  .map(function (d) { return parseInt(d, 10); })
+	
+	    
+	    var a = inputs.get(0)
+	    var b = inputs.get(1)
+	
+	    var difference = a - b;
+	
+	    var output = BlockUtilities.outputToBlocks([difference])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = DifferenceBlock
+
+/***/ },
+/* 40 */
+/*!**************************************!*\
+  !*** ./core/blocks/LessThanBlock.js ***!
+  \**************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var Immutable = __webpack_require__(/*! immutable */ 13);
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var LessThanBlock = {
+	  inputs: 2,
+	  outputs: 1,
+	  op: '<',
+	  type: 'operator',
+	  executable: function (universe) { 
+	    // Get necessary stuff out
+	    var daemon = universe.get('daemon');
+	
+	    var inputs = BlockUtilities.getInputs(daemon, LessThanBlock.inputs * -1)
+	
+	    var gt = parseInt(inputs.get(0), 10) < parseInt(inputs.get(1), 10);
+	    
+	    var result = gt ? '"Less Than"' : '!"Not Less Than"'
+	
+	    var output = BlockUtilities.outputToBlocks([result])
+	
+	    var editedUniverse = BlockUtilities.setOutput(universe, output)
+	
+	    return BlockUtilities.stepDaemon(editedUniverse)
+	  }
+	}
+	
+	module.exports = LessThanBlock
+
+/***/ },
+/* 41 */
+/*!*************************************!*\
+  !*** ./core/blocks/AddressBlock.js ***!
+  \*************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	
+	var AddressBlock = {
+	  inputs: 0,
+	  outputs: 0,
+	  op: 'address',
+	  type: 'address',
+	  executable: BlockUtilities.stepDaemon
+	}
+	
+	module.exports = AddressBlock
 
 /***/ }
 /******/ ]);
