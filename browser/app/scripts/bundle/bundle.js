@@ -52,26 +52,32 @@
 	    Block = __webpack_require__(/*! ./core/Block.js */ 14),
 	    BaconUniverse = __webpack_require__(/*! ./core/BaconUniverse.js */ 15);
 	
-	var INTERVAL = 100;
 	
 	var $input = $('#Concrete-input');
 	var $output = $('#Concrete-output');
 	var $runButton = $('#Concrete-runButton');
+	var $slider = $('#Concrete-speed-slider');
+	
+	var interval = getSliderValue();
+	var runTimeBus = new Bacon.Bus();
 	
 	function textAreaProperty($textfield, initValue) {
 	  var getValue;
+	  
 	  getValue = function() {
 	    return $textfield.val() || $textfield.html();
 	  };
+	  
 	  if (initValue !== null) {
 	    $textfield.html(initValue);
 	  }
+	
 	  return $textfield.asEventStream("keyup input")
 	            .merge($textfield.asEventStream("cut paste").delay(1))
-	            .merge($runButton.asEventStream('click'))
 	            .map(getValue)
 	            .toProperty(getValue())
-	            .skipDuplicates();
+	            .skipDuplicates()
+	            .debounce(500);
 	}
 	
 	function htmlOutput(universe) {
@@ -106,21 +112,38 @@
 	    .join(' ')
 	}
 	
+	function getSliderValue() { 
+	  return parseInt($slider.val(), 10) * -10
+	}
+	
+	function triggerRunning() {
+	  runTimeBus.push({});
+	}
+	
+	$slider.asEventStream('change')
+	  .merge($runButton.asEventStream('click'))
+	  .merge($input.asEventStream("keyup input"))
+	  .onValue(triggerRunning);
+	
 	// Read from input
 	textAreaProperty($input)
-	  .debounce(500)
+	
+	  .sampledBy(runTimeBus)
 	
 	  // Parse universe
 	  .map(Universe.fromString)
 	
 	  // Run universe
 	  .flatMapLatest(function (universe) {
+	    
+	    interval = getSliderValue();
+	
 	    return BaconUniverse.asStream(universe)
 	      // Until no more...
 	      .filter(function (d) { return !(d[0] && d[0] == '<no-more>'); })
 	
 	      // Then animate it nicely over an interval
-	      .bufferingThrottle(INTERVAL)
+	      .bufferingThrottle(interval)
 	
 	  })
 	  .map(htmlOutput)

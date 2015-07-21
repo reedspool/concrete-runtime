@@ -1,0 +1,33 @@
+_#Beginning 
+
+[ _ _ * _ ]#product
+
+[ 
+  _#num _#count
+  @num @a move 
+  @num @b move
+  @num @res move
+
+  @count#main get _ 1 - _#iteration 0 > _ @a @done ? _ jump 
+
+  _#a _#b * _#res
+
+  @iteration @count move
+  @res @a move
+
+  @main jump
+
+  _#done
+  @res get _#final
+]#power
+
+
+@power @method move
+
+
+
+3#A 3 _#method call _#C
+
+
+@C @A move 
+@Beginning jump
