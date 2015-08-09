@@ -1,8 +1,27 @@
 var Universe = require('./core/Universe.js'),
     Tape = require('./core/Tape.js'),
     Block = require('./core/Block.js'),
+    util = require('./util.js'),
     BaconUniverse = require('./core/BaconUniverse.js');
 
+Bacon.Observable.prototype.dynamicInterval = function(intervalObs) {
+  var self = this
+  return new Bacon.EventStream(function(sink) {
+    var interval = 0
+    
+    intervalObs.onValue(function(n) {
+      interval = n
+    });
+
+    self.flatMapLatest(function (x) {
+      return Bacon.later(interval, x)
+    }).onValue(function(x) {
+      sink(new Bacon.Next(x))
+    })
+    
+    return function() { }
+  })
+}
 
 var $input = $('#Concrete-input');
 var $output = $('#Concrete-output');
@@ -12,19 +31,24 @@ var $slider = $('#Concrete-speed-slider');
 var interval = getSliderValue();
 var runTimeBus = new Bacon.Bus();
 
-function textAreaProperty($textfield, initValue) {
+var inputCutAndPasteStream = $input.asEventStream("cut paste").delay(1);
+var inputKeyupStream = $input.asEventStream("keyup input");
+var speedChangeStream = $slider.asEventStream('change');
+var runButtonStream = $runButton.asEventStream('click');
+
+function textAreaProperty(initValue) {
   var getValue;
   
   getValue = function() {
-    return $textfield.val() || $textfield.html();
+    return $input.val() || $input.html();
   };
   
   if (initValue !== null) {
-    $textfield.html(initValue);
+    $input.html(initValue);
   }
 
-  return $textfield.asEventStream("keyup input")
-            .merge($textfield.asEventStream("cut paste").delay(1))
+  return inputKeyupStream
+            .merge(inputCutAndPasteStream)
             .map(getValue)
             .toProperty(getValue())
             .skipDuplicates()
@@ -64,21 +88,26 @@ function htmlOutput(universe) {
 }
 
 function getSliderValue() { 
-  return parseInt($slider.val(), 10) * -10
+  return translateSliderValue($slider.val())
+}
+
+function translateSliderValue(val) {
+  return parseInt(val, 10) * -10;
 }
 
 function triggerRunning() {
   runTimeBus.push({});
 }
 
-$slider.asEventStream('change')
-  .merge($runButton.asEventStream('click'))
-  .merge($input.asEventStream("keyup input"))
+speedChangeStream
+  .merge(runButtonStream)
+  .merge(inputKeyupStream)
+  .merge(inputCutAndPasteStream)
   .onValue(triggerRunning);
 
 // Read from input
-textAreaProperty($input)
-
+textAreaProperty()
+  .toEventStream()
   .sampledBy(runTimeBus)
 
   // Parse universe
@@ -96,6 +125,11 @@ textAreaProperty($input)
       // Then animate it nicely over an interval
       .bufferingThrottle(interval)
 
+      // .dynamicInterval(speedChangeStream.map(getSliderValue))
+
   })
   .map(htmlOutput)
   .onValue($output.html.bind($output))
+
+// Trigger on App ready
+$(triggerRunning)

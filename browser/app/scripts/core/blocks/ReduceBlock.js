@@ -9,7 +9,7 @@ var ReduceBlock = {
   executable: function (universe, environment) { 
     // Get necessary stuff out
     var daemon = universe.get('daemon');
-if(true) debugger; /* TESTING - Delete me */
+
     var list = BlockUtilities.getBlock(daemon, -3).getIn(['code', 'tape', 'blocks'])
     var fold = BlockUtilities.getBlock(daemon, -2);
     var initial = BlockUtilities.getBlock(daemon, -1);

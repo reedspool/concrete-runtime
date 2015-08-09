@@ -4,6 +4,10 @@ $icon-font-path: "../bower_components/bootstrap-sass-official/vendor/assets/font
 @import "../bower_components/bootstrap-sass-official/vendor/assets/stylesheets/bootstrap.scss";
 // endbower
 
+body {
+    background-color: rgb(244, 255, 236);
+}
+
 #Concrete-output {
     .block {
         display: inline-block;

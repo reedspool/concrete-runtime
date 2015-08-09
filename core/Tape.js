@@ -150,12 +150,12 @@ Tape.setBlock = function(location, block) {
 
 Tape.setBlocks = function(location, blocks) {
   var tape;
-  var len = blocks.size
+  var len = blocks.size;
 
   for (var i = 0; i < len; i++) {
     tape = Tape.setBlock(location, blocks.get(i));
     location = Tape.next(location);
-    location = location.set('tape', tape)
+    location = location.set('tape', tape);
   }
 
   return tape || location.get('tape');

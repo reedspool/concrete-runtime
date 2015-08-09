@@ -49,20 +49,20 @@ Universe.step = function (universe, environment) {
   universe = Universe.record(universe);
 
   if ( ! Universe.daemonInBounds(universe) ) {
-    util.log("Tape out of bounds :-/")
+    util.log("Daemon out of bounds of tape! Halting.")
 
     return Universe.die(universe);
   }
 
   if (steps >= config.MAX_UNIVERSE_STEPS) {
-    util.log("Maximum allowed steps exceeded, good bye.")
+    util.log("Maximum allowed steps exceeded! Halting.")
 
     return  Universe.die(universe);
   }
   
   universe = Universe.evaluateBlockAtDaemon(universe, environment);
  
-  // ? Does immutablejs have an atomic increment?
+  // TODO: ? Does immutablejs have an atomic increment?
   universe = universe.set('stepsTaken', universe.get('stepsTaken') + 1)
 
   return universe
@@ -77,8 +77,6 @@ Universe.daemonInBounds = function (universe) {
 Universe.evaluateBlockAtDaemon = function (universe, environment) {
   var daemon = universe.get('daemon');
   var block = Tape.getBlock(daemon);
-
-  if(!block) debugger; /* TESTING - Delete me */
   
   var op_code = Block.opCode(block);
   var executable = Universe.getExecutable(op_code, environment);
@@ -91,13 +89,15 @@ Universe.evaluateBlockAtDaemon = function (universe, environment) {
 Universe.getExecutable = function (op_code, environment) {
   var opfn;
 
-  environment.forEach(function (d, i) {
-    if (d.op == op_code) {
-      // TODO: CHange this to d.executable
-      opfn = d.executable
+  environment.forEach(function (block, i) {
+    if (block.op == op_code) {
+      opfn = block.executable
     }
   })
-if(!opfn) debugger; /* TESTING - Delete me */
+
+  // Executable not found
+  if(!opfn) throw new Error('Executable not found ' + op_code);
+  
   return opfn;
 }
 

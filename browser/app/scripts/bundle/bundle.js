@@ -50,8 +50,27 @@
 	var Universe = __webpack_require__(/*! ./core/Universe.js */ 1),
 	    Tape = __webpack_require__(/*! ./core/Tape.js */ 11),
 	    Block = __webpack_require__(/*! ./core/Block.js */ 14),
-	    BaconUniverse = __webpack_require__(/*! ./core/BaconUniverse.js */ 15);
+	    util = __webpack_require__(/*! ./util.js */ 15),
+	    BaconUniverse = __webpack_require__(/*! ./core/BaconUniverse.js */ 16);
 	
+	Bacon.Observable.prototype.dynamicInterval = function(intervalObs) {
+	  var self = this
+	  return new Bacon.EventStream(function(sink) {
+	    var interval = 0
+	    
+	    intervalObs.onValue(function(n) {
+	      interval = n
+	    });
+	
+	    self.flatMapLatest(function (x) {
+	      return Bacon.later(interval, x)
+	    }).onValue(function(x) {
+	      sink(new Bacon.Next(x))
+	    })
+	    
+	    return function() { }
+	  })
+	}
 	
 	var $input = $('#Concrete-input');
 	var $output = $('#Concrete-output');
@@ -61,19 +80,24 @@
 	var interval = getSliderValue();
 	var runTimeBus = new Bacon.Bus();
 	
-	function textAreaProperty($textfield, initValue) {
+	var inputCutAndPasteStream = $input.asEventStream("cut paste").delay(1);
+	var inputKeyupStream = $input.asEventStream("keyup input");
+	var speedChangeStream = $slider.asEventStream('change');
+	var runButtonStream = $runButton.asEventStream('click');
+	
+	function textAreaProperty(initValue) {
 	  var getValue;
 	  
 	  getValue = function() {
-	    return $textfield.val() || $textfield.html();
+	    return $input.val() || $input.html();
 	  };
 	  
 	  if (initValue !== null) {
-	    $textfield.html(initValue);
+	    $input.html(initValue);
 	  }
 	
-	  return $textfield.asEventStream("keyup input")
-	            .merge($textfield.asEventStream("cut paste").delay(1))
+	  return inputKeyupStream
+	            .merge(inputCutAndPasteStream)
 	            .map(getValue)
 	            .toProperty(getValue())
 	            .skipDuplicates()
@@ -113,21 +137,26 @@
 	}
 	
 	function getSliderValue() { 
-	  return parseInt($slider.val(), 10) * -10
+	  return translateSliderValue($slider.val())
+	}
+	
+	function translateSliderValue(val) {
+	  return parseInt(val, 10) * -10;
 	}
 	
 	function triggerRunning() {
 	  runTimeBus.push({});
 	}
 	
-	$slider.asEventStream('change')
-	  .merge($runButton.asEventStream('click'))
-	  .merge($input.asEventStream("keyup input"))
+	speedChangeStream
+	  .merge(runButtonStream)
+	  .merge(inputKeyupStream)
+	  .merge(inputCutAndPasteStream)
 	  .onValue(triggerRunning);
 	
 	// Read from input
-	textAreaProperty($input)
-	
+	textAreaProperty()
+	  .toEventStream()
 	  .sampledBy(runTimeBus)
 	
 	  // Parse universe
@@ -145,10 +174,14 @@
 	      // Then animate it nicely over an interval
 	      .bufferingThrottle(interval)
 	
+	      // .dynamicInterval(speedChangeStream.map(getSliderValue))
+	
 	  })
 	  .map(htmlOutput)
 	  .onValue($output.html.bind($output))
-
+	
+	// Trigger on App ready
+	$(triggerRunning)
 
 /***/ },
 /* 1 */
@@ -208,20 +241,20 @@
 	  universe = Universe.record(universe);
 	
 	  if ( ! Universe.daemonInBounds(universe) ) {
-	    util.log("Tape out of bounds :-/")
+	    util.log("Daemon out of bounds of tape! Halting.")
 	
 	    return Universe.die(universe);
 	  }
 	
 	  if (steps >= config.MAX_UNIVERSE_STEPS) {
-	    util.log("Maximum allowed steps exceeded, good bye.")
+	    util.log("Maximum allowed steps exceeded! Halting.")
 	
 	    return  Universe.die(universe);
 	  }
 	  
 	  universe = Universe.evaluateBlockAtDaemon(universe, environment);
 	 
-	  // ? Does immutablejs have an atomic increment?
+	  // TODO: ? Does immutablejs have an atomic increment?
 	  universe = universe.set('stepsTaken', universe.get('stepsTaken') + 1)
 	
 	  return universe
@@ -236,8 +269,6 @@
 	Universe.evaluateBlockAtDaemon = function (universe, environment) {
 	  var daemon = universe.get('daemon');
 	  var block = Tape.getBlock(daemon);
-	
-	  if(!block) debugger; /* TESTING - Delete me */
 	  
 	  var op_code = Block.opCode(block);
 	  var executable = Universe.getExecutable(op_code, environment);
@@ -250,13 +281,15 @@
 	Universe.getExecutable = function (op_code, environment) {
 	  var opfn;
 	
-	  environment.forEach(function (d, i) {
-	    if (d.op == op_code) {
-	      // TODO: CHange this to d.executable
-	      opfn = d.executable
+	  environment.forEach(function (block, i) {
+	    if (block.op == op_code) {
+	      opfn = block.executable
 	    }
 	  })
-	if(!opfn) debugger; /* TESTING - Delete me */
+	
+	  // Executable not found
+	  if(!opfn) throw new Error('Executable not found ' + op_code);
+	  
 	  return opfn;
 	}
 	
@@ -13705,6 +13738,7 @@
 
 	module.exports = {
 	  log: console.log.bind(console),
+	  async: function (fn) { setTimeout(fn, 0); },
 	  concat: function (a, b) { return a.concat(b) }
 	}
 
@@ -13867,12 +13901,12 @@
 	
 	Tape.setBlocks = function(location, blocks) {
 	  var tape;
-	  var len = blocks.size
+	  var len = blocks.size;
 	
 	  for (var i = 0; i < len; i++) {
 	    tape = Tape.setBlock(location, blocks.get(i));
 	    location = Tape.next(location);
-	    location = location.set('tape', tape)
+	    location = location.set('tape', tape);
 	  }
 	
 	  return tape || location.get('tape');
@@ -23578,37 +23612,46 @@
 
 /***/ },
 /* 15 */
+/*!*****************!*\
+  !*** ./util.js ***!
+  \*****************/
+/***/ function(module, exports, __webpack_require__) {
+
+
+
+/***/ },
+/* 16 */
 /*!*******************************!*\
   !*** ./core/BaconUniverse.js ***!
   \*******************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var Bacon = __webpack_require__(/*! baconjs */ 16)
+	var Bacon = __webpack_require__(/*! baconjs */ 17)
 	  , Universe = __webpack_require__(/*! ./Universe.js */ 1)
 	  , blocks = [
-	          __webpack_require__(/*! ./blocks/BlankBlock.js */ 19),
-	          __webpack_require__(/*! ./blocks/BlockUtilities.js */ 20),
-	          __webpack_require__(/*! ./blocks/CallBlock.js */ 21),
-	          __webpack_require__(/*! ./blocks/ConditionalBlock.js */ 22),
-	          __webpack_require__(/*! ./blocks/EndBlock.js */ 23),
-	          __webpack_require__(/*! ./blocks/FoldBlock.js */ 24),
-	          __webpack_require__(/*! ./blocks/GetBlock.js */ 25),
-	          __webpack_require__(/*! ./blocks/GreaterThanBlock.js */ 26),
-	          __webpack_require__(/*! ./blocks/JumpBlock.js */ 27),
-	          __webpack_require__(/*! ./blocks/MoveBlock.js */ 28),
-	          __webpack_require__(/*! ./blocks/NumberBlock.js */ 29),
-	          __webpack_require__(/*! ./blocks/PrintBlock.js */ 30),
-	          __webpack_require__(/*! ./blocks/PrintLineBlock.js */ 31),
-	          __webpack_require__(/*! ./blocks/ProductBlock.js */ 32),
-	          __webpack_require__(/*! ./blocks/SumBlock.js */ 33),
-	          __webpack_require__(/*! ./blocks/StringBlock.js */ 34),
-	          __webpack_require__(/*! ./blocks/FalseyBlock.js */ 35),
-	          __webpack_require__(/*! ./blocks/ReduceBlock.js */ 36),
-	          __webpack_require__(/*! ./blocks/TimesBlock.js */ 37),
-	          __webpack_require__(/*! ./blocks/DivisionBlock.js */ 38),
-	          __webpack_require__(/*! ./blocks/DifferenceBlock.js */ 39),
-	          __webpack_require__(/*! ./blocks/LessThanBlock.js */ 40),
-	          __webpack_require__(/*! ./blocks/AddressBlock.js */ 41)
+	    __webpack_require__(/*! ./blocks/BlankBlock.js */ 20),
+	    __webpack_require__(/*! ./blocks/BlockUtilities.js */ 21),
+	    __webpack_require__(/*! ./blocks/CallBlock.js */ 22),
+	    __webpack_require__(/*! ./blocks/ConditionalBlock.js */ 23),
+	    __webpack_require__(/*! ./blocks/EndBlock.js */ 24),
+	    __webpack_require__(/*! ./blocks/FoldBlock.js */ 25),
+	    __webpack_require__(/*! ./blocks/GetBlock.js */ 26),
+	    __webpack_require__(/*! ./blocks/GreaterThanBlock.js */ 27),
+	    __webpack_require__(/*! ./blocks/JumpBlock.js */ 28),
+	    __webpack_require__(/*! ./blocks/MoveBlock.js */ 29),
+	    __webpack_require__(/*! ./blocks/NumberBlock.js */ 30),
+	    __webpack_require__(/*! ./blocks/PrintBlock.js */ 31),
+	    __webpack_require__(/*! ./blocks/PrintLineBlock.js */ 32),
+	    __webpack_require__(/*! ./blocks/ProductBlock.js */ 33),
+	    __webpack_require__(/*! ./blocks/SumBlock.js */ 34),
+	    __webpack_require__(/*! ./blocks/StringBlock.js */ 35),
+	    __webpack_require__(/*! ./blocks/FalseyBlock.js */ 36),
+	    __webpack_require__(/*! ./blocks/ReduceBlock.js */ 37),
+	    __webpack_require__(/*! ./blocks/TimesBlock.js */ 38),
+	    __webpack_require__(/*! ./blocks/DivisionBlock.js */ 39),
+	    __webpack_require__(/*! ./blocks/DifferenceBlock.js */ 40),
+	    __webpack_require__(/*! ./blocks/LessThanBlock.js */ 41),
+	    __webpack_require__(/*! ./blocks/AddressBlock.js */ 42)
 	  ];
 	
 	Universe.asStream = function(universe) {
@@ -23621,6 +23664,10 @@
 	        universe = Universe.step(universe, blocks)
 	        sink(universe)
 	      } else {
+	
+	        // Cancel the sinker when execution is done to prevent mem leak
+	        clearInterval(interval);
+	        
 	        sink(Bacon.noMore)
 	      }
 	    }
@@ -23655,7 +23702,7 @@
 
 
 /***/ },
-/* 16 */
+/* 17 */
 /*!**************************************!*\
   !*** ./core/~/baconjs/dist/Bacon.js ***!
   \**************************************/
@@ -27031,7 +27078,7 @@
 	  return this.last().firstToPromise(PromiseCtr);
 	};
 	
-	if (("function" !== "undefined" && __webpack_require__(/*! !webpack amd define */ 17) !== null) && (__webpack_require__(/*! !webpack amd options */ 18) != null)) {
+	if (("function" !== "undefined" && __webpack_require__(/*! !webpack amd define */ 18) !== null) && (__webpack_require__(/*! !webpack amd options */ 19) != null)) {
 	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = function() {
 	      return Bacon;
 	    }.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
@@ -27048,7 +27095,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(/*! (webpack)/buildin/module.js */ 3)(module)))
 
 /***/ },
-/* 17 */
+/* 18 */
 /*!***************************************!*\
   !*** (webpack)/buildin/amd-define.js ***!
   \***************************************/
@@ -27058,7 +27105,7 @@
 
 
 /***/ },
-/* 18 */
+/* 19 */
 /*!****************************************!*\
   !*** (webpack)/buildin/amd-options.js ***!
   \****************************************/
@@ -27069,13 +27116,13 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, {}))
 
 /***/ },
-/* 19 */
+/* 20 */
 /*!***********************************!*\
   !*** ./core/blocks/BlankBlock.js ***!
   \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var BlankBlock = {
 	  inputs: 0,
@@ -27088,7 +27135,7 @@
 	module.exports = BlankBlock
 
 /***/ },
-/* 20 */
+/* 21 */
 /*!***************************************!*\
   !*** ./core/blocks/BlockUtilities.js ***!
   \***************************************/
@@ -27237,14 +27284,14 @@
 	}
 
 /***/ },
-/* 21 */
+/* 22 */
 /*!**********************************!*\
   !*** ./core/blocks/CallBlock.js ***!
   \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var CallBlock = {
 	  inputs: BlockUtilities.VARIABLE_INPUTS,
@@ -27273,14 +27320,14 @@
 	module.exports = CallBlock
 
 /***/ },
-/* 22 */
+/* 23 */
 /*!*****************************************!*\
   !*** ./core/blocks/ConditionalBlock.js ***!
   \*****************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var ConditionalBlock = {
 	  inputs: 3,
@@ -27310,13 +27357,13 @@
 	module.exports = ConditionalBlock
 
 /***/ },
-/* 23 */
+/* 24 */
 /*!*********************************!*\
   !*** ./core/blocks/EndBlock.js ***!
   \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var EndBlock = {
 	  inputs: 0,
@@ -27329,13 +27376,13 @@
 	module.exports = EndBlock
 
 /***/ },
-/* 24 */
+/* 25 */
 /*!**********************************!*\
   !*** ./core/blocks/FoldBlock.js ***!
   \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var FoldBlock = {
 	  inputs: 0,
@@ -27348,14 +27395,14 @@
 	module.exports = FoldBlock
 
 /***/ },
-/* 25 */
+/* 26 */
 /*!*********************************!*\
   !*** ./core/blocks/GetBlock.js ***!
   \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var GetBlock = {
 	  inputs: 1,
@@ -27383,14 +27430,14 @@
 	module.exports = GetBlock
 
 /***/ },
-/* 26 */
+/* 27 */
 /*!*****************************************!*\
   !*** ./core/blocks/GreaterThanBlock.js ***!
   \*****************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var GreaterThanBlock = {
 	  inputs: 2,
@@ -27418,14 +27465,14 @@
 	module.exports = GreaterThanBlock
 
 /***/ },
-/* 27 */
+/* 28 */
 /*!**********************************!*\
   !*** ./core/blocks/JumpBlock.js ***!
   \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var JumpBlock = {
 	  inputs: 1,
@@ -27447,14 +27494,14 @@
 	module.exports = JumpBlock
 
 /***/ },
-/* 28 */
+/* 29 */
 /*!**********************************!*\
   !*** ./core/blocks/MoveBlock.js ***!
   \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var MoveBlock = {
 	  inputs: 2,
@@ -27479,13 +27526,13 @@
 	module.exports = MoveBlock
 
 /***/ },
-/* 29 */
+/* 30 */
 /*!************************************!*\
   !*** ./core/blocks/NumberBlock.js ***!
   \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var NumberBlock = {
 	  inputs: 0,
@@ -27498,14 +27545,14 @@
 	module.exports = NumberBlock
 
 /***/ },
-/* 30 */
+/* 31 */
 /*!***********************************!*\
   !*** ./core/blocks/PrintBlock.js ***!
   \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var PrintBlock = {
 	  inputs: 1,
@@ -27527,14 +27574,14 @@
 	module.exports = PrintBlock
 
 /***/ },
-/* 31 */
+/* 32 */
 /*!***************************************!*\
   !*** ./core/blocks/PrintLineBlock.js ***!
   \***************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var PrintLineBlock = {
 	  inputs: 1,
@@ -27557,14 +27604,14 @@
 	module.exports = PrintLineBlock
 
 /***/ },
-/* 32 */
+/* 33 */
 /*!*************************************!*\
   !*** ./core/blocks/ProductBlock.js ***!
   \*************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var ProductBlock = {
 	  inputs: 2,
@@ -27592,14 +27639,14 @@
 	module.exports = ProductBlock
 
 /***/ },
-/* 33 */
+/* 34 */
 /*!*********************************!*\
   !*** ./core/blocks/SumBlock.js ***!
   \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var SumBlock = {
 	  inputs: 2,
@@ -27627,13 +27674,13 @@
 	module.exports = SumBlock
 
 /***/ },
-/* 34 */
+/* 35 */
 /*!************************************!*\
   !*** ./core/blocks/StringBlock.js ***!
   \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var StringBlock = {
 	  inputs: 0,
@@ -27646,13 +27693,13 @@
 	module.exports = StringBlock
 
 /***/ },
-/* 35 */
+/* 36 */
 /*!************************************!*\
   !*** ./core/blocks/FalseyBlock.js ***!
   \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var FalseyBlock = {
 	  inputs: 0,
@@ -27665,14 +27712,14 @@
 	module.exports = FalseyBlock
 
 /***/ },
-/* 36 */
+/* 37 */
 /*!************************************!*\
   !*** ./core/blocks/ReduceBlock.js ***!
   \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var ReduceBlock = {
 	  inputs: BlockUtilities.VARIABLE_INPUTS,
@@ -27682,7 +27729,7 @@
 	  executable: function (universe, environment) { 
 	    // Get necessary stuff out
 	    var daemon = universe.get('daemon');
-	if(true) debugger; /* TESTING - Delete me */
+	
 	    var list = BlockUtilities.getBlock(daemon, -3).getIn(['code', 'tape', 'blocks'])
 	    var fold = BlockUtilities.getBlock(daemon, -2);
 	    var initial = BlockUtilities.getBlock(daemon, -1);
@@ -27720,14 +27767,14 @@
 	module.exports = ReduceBlock
 
 /***/ },
-/* 37 */
+/* 38 */
 /*!***********************************!*\
   !*** ./core/blocks/TimesBlock.js ***!
   \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var TimesBlock = {
 	  inputs: BlockUtilities.VARIABLE_INPUTS,
@@ -27759,14 +27806,14 @@
 	module.exports = TimesBlock
 
 /***/ },
-/* 38 */
+/* 39 */
 /*!**************************************!*\
   !*** ./core/blocks/DivisionBlock.js ***!
   \**************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var DivisionBlock = {
 	  inputs: 2,
@@ -27796,14 +27843,14 @@
 	module.exports = DivisionBlock
 
 /***/ },
-/* 39 */
+/* 40 */
 /*!****************************************!*\
   !*** ./core/blocks/DifferenceBlock.js ***!
   \****************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var DifferenceBlock = {
 	  inputs: 2,
@@ -27834,14 +27881,14 @@
 	module.exports = DifferenceBlock
 
 /***/ },
-/* 40 */
+/* 41 */
 /*!**************************************!*\
   !*** ./core/blocks/LessThanBlock.js ***!
   \**************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var Immutable = __webpack_require__(/*! immutable */ 13);
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var LessThanBlock = {
 	  inputs: 2,
@@ -27869,13 +27916,13 @@
 	module.exports = LessThanBlock
 
 /***/ },
-/* 41 */
+/* 42 */
 /*!*************************************!*\
   !*** ./core/blocks/AddressBlock.js ***!
   \*************************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 20)
+	var BlockUtilities = __webpack_require__(/*! ./BlockUtilities.js */ 21)
 	
 	var AddressBlock = {
 	  inputs: 0,

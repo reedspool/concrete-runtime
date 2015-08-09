@@ -1,0 +1,19 @@
+/**
+ * UNFINISHED UNFINISHED UNFINISHED UNFINISHED UNFINISHED
+ * Concrete Program with a complex loop
+ *
+ * Inputs:
+ *   Innards is a fold which is run Times number of times  
+ * Outputs:
+ *   None
+ *
+ * Author: Reed Spool
+ */
+[ _#Innards _#Times 
+  @Times @limit move
+  @Innards get#BeginLoop _ callWithNoOutputs 1 + _#B 5#limit > _ 6 0 ? _ jump @B @A move @A jump
+]#WhileLoop // No outputs
+
+// Example run
+@WhileLoop @callspot move
+[ ] _@callspot call 

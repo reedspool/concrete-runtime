@@ -1,1 +1,12 @@
-0#A 1#B + _#C . "," . _ . @B @A move @C @B move 0#I 1 + _#J 20 > _ 6 0 ? _ jump @J @I move @A jump END
+/**
+ * Fibonacci loop
+ */
+0#A 1#B + _#C 
+. "," . _ . 
+@B @A move 
+@C @B move 
+0#I 1 + _#J 
+20 > _ 6 0 
+? _ jump 
+@J @I move 
+@A jump

@@ -1,8 +1,6 @@
 _#Beginning 
 
-[ _ _ * _ ]#product
-
-[ 
+3#A 3 [ 
   _#num _#count
   @num @a move 
   @num @b move
@@ -19,15 +17,11 @@ _#Beginning
 
   _#done
   @res get _#final
-]#power
+] call _#C
 
 
-@power @method move
-
-
-
-3#A 3 _#method call _#C
-
-
+// Accumulate the result
 @C @A move 
+
+// Loop forever
 @Beginning jump
