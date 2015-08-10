@@ -17,13 +17,25 @@ See also the [Trello Board](https://trello.com/b/LjKsfBw4/concrete).
 
 ## Language
 
-A Concrete program is made up of "blocks" of text (code). The blocks are separated by a space. For example, `3 2 + _` is a simple Concrete program with 4 blocks, namely 3, 2, + ("plus"), and _ ("blank").
+A Concrete program is made up of "blocks" of text (code). The blocks are separated by a space. For example, `3 2 + _` is a simple Concrete program with 4 blocks, namely `3`, `2`, `+` ("plus"), and `_` ("blank").
 
-Each block is "executed" in order, one at a time, from left to right. Most blocks represent information such as numbers (`1 2 3 4 PI`), strings of text (`"Hello how are you"`), addresses (`@Beginning @I`), or the blank block (`_`); these blocks are called "values". Nothing happens when value blocks are executed.
+Each block is "executed" in order, one at a time, from left to right. Most blocks represent information such as numbers (`1 2 3 4 2014`), quoted strings of text (`"Hello how are you"`), addresses (`@Beginning @I`), or the blank block (`_`); these blocks are called "values". Nothing happens when value blocks are executed.
 
 Operator blocks cause something to happen when executed. Some operators are `+`, `-`, `*`, `/`, `jump`, `move`, and `reduce`. When these blocks are executed, any inputs required are taken from the left. For example, in the program `3 2 + _`, `3` and `2` are to be added together. If the execution causes data to be output, it is output to the right of the operator. Outputs overwrite the blocks they are placed in, so that's why you normally see a blank where output is expected. For example, if I executed the program `3 2 + 24`, the `24` would be overwritten by `5`.
 
-It's easy! Try it out at http://goal-keeper-deborah-51172.bitballoon.com/
+Each block can be named by adding a hashmark followed by a single word (no spaces). That word is now the name of that block, and it can be referred to as an address. An address block starts with the AT sign followed by a name, so `3#MyNumber` would be addressed as `@MyNumber`. Many important operators take addresses as input.
+
+Operations can be strung together, using prior outputs. `1 1 + _ 1 + _ 1 + _ 1 + _` will finally result in `5`, the sum of all those `1` blocks. 
+
+To use previous results which are not conveniently placed, use the `move` block. To change the order of execution, we use `jump`. Together, we can use them to make a never-ending counter:
+
+`1#A 1 + _#C @C @A move @A jump`
+
+`move` takes two addresses as inputs. Above, that's `@C` and `@A`. The value at the first address is placed into the space with the second address. Above, the result of the addition replaces one of the inputs; each time `+` is executed, it will use the updated number.
+
+`jump` takes one input, an address. It changes the next place of execution to be at that address. In the above example, `@A jump` causes the next execution point to be at `1#A`, so the whole program loops infinitely.
+
+It's easy! [Try it out](http://goal-keeper-deborah-51172.bitballoon.com/)
 
 ------------------------
 
