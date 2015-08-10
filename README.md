@@ -6,7 +6,7 @@
 
 Concrete is a new programming language. Concrete's closest relatives are Factor, and BASIC, but it has a unique twist: There is no heap memory: the output of all operations are stored within the code. `3 2 + _` for example evaluates to `3 2 + 5`. See more in the examples below.
 
-Try out the [NEW web version](http://counseller-corinne-56612.bitballoon.com/)!
+Try out the [NEW(er) web version](http://goal-keeper-deborah-51172.bitballoon.com/)!
 
 For the more adventurous, you can install and play with Concrete on your home machine right now! 
 
@@ -14,6 +14,16 @@ For the more adventurous, you can install and play with Concrete on your home ma
 2. run `npm install && node node_environment_utilities/main.js` in your terminal.
 
 See also the [Trello Board](https://trello.com/b/LjKsfBw4/concrete).
+
+## Language
+
+A Concrete program is made up of "blocks" of text (code). The blocks are separated by a space. For example, `3 2 + _` is a simple Concrete program with 4 blocks, namely 3, 2, + ("plus"), and _ ("blank").
+
+Each block is "executed" in order, one at a time, from left to right. Most blocks represent information such as numbers (`1 2 3 4 PI`), strings of text (`"Hello how are you"`), addresses (`@Beginning @I`), or the blank block (`_`); these blocks are called "values". Nothing happens when value blocks are executed.
+
+Operator blocks cause something to happen when executed. Some operators are `+`, `-`, `*`, `/`, `jump`, `move`, and `reduce`. When these blocks are executed, any inputs required are taken from the left. For example, in the program `3 2 + _`, `3` and `2` are to be added together. If the execution causes data to be output, it is output to the right of the operator. Outputs overwrite the blocks they are placed in, so that's why you normally see a blank where output is expected. For example, if I executed the program `3 2 + 24`, the `24` would be overwritten by `5`.
+
+It's easy! Try it out at http://goal-keeper-deborah-51172.bitballoon.com/
 
 ------------------------
 
@@ -27,24 +37,24 @@ See also the [Trello Board](https://trello.com/b/LjKsfBw4/concrete).
     3 2 < _
     "true" 5 4 ? _
 
-      // Any kind of whitespace will do
+    // Any kind of whitespace will do
     3 2 +        _
     3 2 +   \t\n     _
 
-      // Sequences of ops
+    // Sequences of ops
     0 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _
     0 1 + 1 1 + 2 1 + 3 1 + 4 1 + 5 1 + 6
 
     3 4 + 7 5 > "Greater Than" bigger smaller ? bigger
 
-    // Fibs
+    // Fibonacci sequences (@A contains the @Ith Fibonacci)
     0#A 1#B + _#C . "," . _ . 
       @B @A move 
       @C @B move 
       0#I 1 + _#J 20 > _ 6 0 ? _ jump 
       @J @I move @A jump
 
-    // While loop
+    // Halting While-loop
     5#A 1 + 6#B 5 > "Greater Than" 6 0 ? 6 jump @B @A move @A jump
 
     // Names
