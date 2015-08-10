@@ -15,9 +15,9 @@ For the more adventurous, you can install and play with Concrete on your home ma
 
 See also the [Trello Board](https://trello.com/b/LjKsfBw4/concrete).
 
-## Language
+## Language Specifics
 
-A Concrete program is made up of "blocks" of text (code). The blocks are separated by a space. For example, `3 2 + _` is a simple Concrete program with 4 blocks, namely `3`, `2`, `+` ("plus"), and `_` ("blank").
+A Concrete program is made up of "blocks" of text (code). The blocks are separated by a space (any whitespace will do). For example, `3 2 + _` is a simple Concrete program with 4 blocks, namely `3`, `2`, `+` ("plus"), and `_` ("blank").
 
 Each block is "executed" in order, one at a time, from left to right. Most blocks represent information such as numbers (`1 2 3 4 2014`), quoted strings of text (`"Hello how are you"`), addresses (`@Beginning @I`), or the blank block (`_`); these blocks are called "values". Nothing happens when value blocks are executed.
 
@@ -35,7 +35,11 @@ To use previous results which are not conveniently placed, use the `move` block.
 
 `jump` takes one input, an address. It changes the next place of execution to be at that address. In the above example, `@A jump` causes the next execution point to be at `1#A`, so the whole program loops infinitely.
 
-It's easy! [Try it out](http://goal-keeper-deborah-51172.bitballoon.com/)
+It's <em>that</em> easy. [Try it out here!](http://goal-keeper-deborah-51172.bitballoon.com/)
+
+## Programming 101
+
+<strong>In Progress</strong> I want to write all of a Programming 101 course with Concrete. I am seeing that this is quite an undertaking. Please let me know if you would be interested in seeing this made, or if you would like to contribute. Thanks!
 
 ------------------------
 
@@ -49,12 +53,12 @@ It's easy! [Try it out](http://goal-keeper-deborah-51172.bitballoon.com/)
     3 2 < _
     "true" 5 4 ? _
 
-    // Any kind of whitespace will do
-    3 2 +        _
-    3 2 +   \t\n     _
+    /* By the way, JavaScript */
+    // style comments work how you think.
 
     // Sequences of ops
     0 1 + _ 1 + _ 1 + _ 1 + _ 1 + _ 1 + _
+    // resolves to
     0 1 + 1 1 + 2 1 + 3 1 + 4 1 + 5 1 + 6
 
     3 4 + 7 5 > "Greater Than" bigger smaller ? bigger
@@ -81,12 +85,9 @@ It's easy! [Try it out](http://goal-keeper-deborah-51172.bitballoon.com/)
     // Reduce
     [ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _ ] 1 reduce 42
 
-    // Reduce with names
-    [ 1 1 1 1 1 1 2 3 7 ] [ _ _ * _#A @A get _ ] 1 reduce 42
-
 -------------------------
 
-## Concrete
+## Concrete Thoughts
 
 Programming should be fun and easy for everyone. If you've learned some programming before, you've probably had the same thought I did, "each individual step of programming is easy, so why is programming so hard to learn?"
 
