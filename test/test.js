@@ -8,10 +8,11 @@
 var Bacon = require('baconjs'),
     _ = require('lodash'),
     assert = require('assert'),
-    config = require('../core/config.js'),
-    util = require('../core/util.js'),
-    Tape = require('../core/Tape.js'),
-    BaconUniverse = require('../core/BaconUniverse.js');
+    concrete = require('../concrete');
+    config = concrete.config,
+    util = concrete.util,
+    Tape = concrete.Tape,
+    BaconUniverse = concrete.BaconUniverse;
 
 var tests = {
 
@@ -77,12 +78,12 @@ Bacon.fromArray(_.keys(tests))
     var actual_output = Tape.toString(u1.get('tape'));
     var original_input = Tape.toString(u1.get('history').get(0));
     var expected_output = tests[original_input];
-    var str = 
+    var str =
       '\n' +
-      original_input + 
-      '\n should be \n' + 
-      expected_output + 
-      '\n and was \n' + 
+      original_input +
+      '\n should be \n' +
+      expected_output +
+      '\n and was \n' +
       actual_output
     assert(actual_output == expected_output,
       "\n\nOutput did not match " + str)
