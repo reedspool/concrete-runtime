@@ -1,8 +1,8 @@
 {
-  "name": "Concrete",
+  "name": "concrete-runtime",
   "version": "0.0.123",
   "description": "A programming language that is also a game and fun. A fun game.",
-  "main": "node_environment_utilities/main.js",
+  "main": "concrete.js",
   "dependencies": {
     "baconjs": "^0.7.53",
     "immutable": "^3.7.3",
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/reedspool/programming_game.git"
+    "url": "https://github.com/codeempathy/concrete-runtime.git"
   },
   "keywords": [
     "programming",
@@ -24,7 +24,7 @@
   "author": "reed",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/reedspool/programming_game/issues"
+    "url": "https://github.com/codeempathy/concrete-runtime/issues"
   },
-  "homepage": "https://github.com/reedspool/programming_game"
+  "homepage": "https://github.com/codeempathy/concrete-runtime"
 }
