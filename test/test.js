@@ -25,6 +25,13 @@ var tests = {
   '3 2 < _ END': '3 2 < !"Not Less Than" END',
   '"true" 5 4 ? _ END': '"true" 5 4 ? 5 END',
 
+  // Basic math with decimals
+  '3 2.2 * _ END': '3 2.2 * 6.6 END',
+  '3 2.2 + _ END': '3 2.2 + 5.2 END',
+  '5 1 / _ END' : '5 1 / 5 END',
+  '1 5 / _ END' : '1 5 / 0.2 END',
+
+
   // Newlines are no problem
   '"true" 5 4\n ? _ END': '"true" 5 4 ? 5 END',
 
