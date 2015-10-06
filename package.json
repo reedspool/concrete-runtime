@@ -11,6 +11,7 @@
   },
   "devDependencies": {},
   "scripts": {
+    "pegjs": "pegjs lib/ConcreteParser.pegjs lib/ConcreteParser.js",
     "test": "node test/test.js"
   },
   "repository": {
